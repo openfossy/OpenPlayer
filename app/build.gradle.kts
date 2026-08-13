@@ -19,7 +19,7 @@ val splitApks = !project.hasProperty("noSplits") && !gradle.startParameter.taskN
 }
 
 android {
-    namespace = "com.devson.nvplayer"
+    namespace = "com.devson.nvplayeroff"
     compileSdk {
         version = release(36)
     }
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.devson.nvplayer"
+        applicationId = "com.devson.nvplayeroff"
         minSdk = 26
         targetSdk = 36
         versionCode = 116
@@ -39,12 +39,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
-        }
-
-        externalNativeBuild {
-            cmake {
-                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-            }
         }
     }
     signingConfigs {
@@ -64,7 +58,7 @@ android {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            resValue("string", "app_name", "NPlay Beta")
+            resValue("string", "app_name", "NPlay Offline")
         }
 
         release {
@@ -74,7 +68,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            resValue("string", "app_name", "Nosved Player")
+            resValue("string", "app_name", "Nosved Player Offline")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -87,8 +81,8 @@ android {
         abi {
             isEnable = true
             reset()
-            include("armeabi-v7a", "arm64-v8a")
-            isUniversalApk = false
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
         }
     }
     applicationVariants.all {
@@ -96,7 +90,7 @@ android {
         variant.outputs.all {
             val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val abiName = outputImpl.filters.find { it.filterType == "ABI" }?.identifier ?: "universal"
-            outputFileName = "NosvedPlayer-v${variant.versionName}-${abiName}.apk"
+            outputFileName = "NosvedPlayerOffline-v${variant.versionName}-${abiName}.apk"
         }
     }
     compileOptions {
@@ -105,6 +99,7 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf("-Xskip-metadata-version-check")
     }
     buildFeatures {
         compose = true
@@ -115,13 +110,6 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
     }
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
-    ndkVersion = "27.0.12077973"
 
     packaging {
         resources {
@@ -131,20 +119,17 @@ android {
             excludes += "META-INF/NOTICE*"
             excludes += "META-INF/*.kotlin_module"
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
-            excludes += "assets/native-v9a/**"
-            excludes += "assets/py.*/**"
         }
         jniLibs {
-            useLegacyPackaging = true
+            useLegacyPackaging = false
             pickFirsts += "**/libc++_shared.so"
-            excludes += "**/libpython_bin.so"
         }
     }
 }
 
 dependencies {
     implementation("com.github.marlboro-advance:mediainfoAndroid:v1.0.0-fix")
-    implementation(files("libs/mpvlib.aar"))
+    implementation(files("libs/mpv-android-lib-2026-06-25.aar"))
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.graphics.shapes)
     implementation("androidx.appcompat:appcompat:1.7.0")
@@ -182,7 +167,9 @@ dependencies {
 androidComponents {
     val abiCodes = mapOf(
         "armeabi-v7a" to 1,
-        "arm64-v8a" to 2
+        "arm64-v8a" to 2,
+        "x86" to 3,
+        "x86_64" to 4
     )
 
     onVariants { variant ->

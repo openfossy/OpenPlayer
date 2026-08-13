@@ -136,8 +136,8 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
                         ) {
                             PolicyPointRow(
                                 icon = Icons.Default.Shield,
-                                title = "Direct Streaming Connections",
-                                description = "When playing network streams (such as YouTube or custom links), the app connects directly to the media hosts. These connections are subject to the hosts' own privacy policies, without intermediate tracking by us."
+                                title = "100% Offline Media Player",
+                                description = "Nosved Player operates strictly offline and does not connect to external servers or collect any user data."
                             )
                         }
 

@@ -80,7 +80,6 @@ fun VideoListTopAppBar(
     keyboard: SoftwareKeyboardController? = null,
     onRecycleBinClick: (() -> Unit)? = null,
     onPlayFolder: (() -> Unit)? = null,
-    onNetworkStreamClick: (() -> Unit)? = null,
     // Storage selector params
     availableStorages: List<StorageVolumeInfo> = emptyList(),
     selectedStorage: StorageVolumeInfo? = null,

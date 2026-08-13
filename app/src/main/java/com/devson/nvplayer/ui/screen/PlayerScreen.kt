@@ -56,7 +56,6 @@ import com.devson.nvplayer.data.repository.MultiFingerAction
 import android.provider.MediaStore
 import com.devson.nvplayer.ui.common.SubtitleSettingsSideSheet
 import com.devson.nvplayer.ui.common.sheets.AudioSettingsSideSheet
-import com.devson.nvplayer.ui.common.sheets.QualitySettingsSideSheet
 import com.devson.nvplayer.ui.common.ComposeSubtitleOverlay
 import com.devson.nvplayer.ui.common.sheets.PlayerSettingsSideSheet
 import com.devson.nvplayer.ui.common.sheets.EnhanceSettingsSideSheet
@@ -191,10 +190,6 @@ fun PlayerScreen(
     onUpdateShowUpNextQueue: (Boolean) -> Unit = {},
     onUpdateIsAmbientModeEnabled: (Boolean) -> Unit = {},
     onUpdateAmbientBlurStyle: (com.devson.nvplayer.data.repository.AmbientBlurStyle) -> Unit = {},
-    networkSpeedBytesPerSec: Long = 0L,
-    bufferDurationSeconds: Double = 0.0,
-    isNetworkStream: Boolean = false,
-    bufferedPosition: Long = 0L,
     isDynamicSpeedActive: Boolean = false,
     onSetDynamicSpeedActive: (Boolean) -> Unit = {},
     viewModel: com.devson.nvplayer.viewmodel.PlayerViewModel? = null,
@@ -211,7 +206,6 @@ fun PlayerScreen(
         owner?.let { androidx.lifecycle.ViewModelProvider(it)[com.devson.nvplayer.viewmodel.PlayerViewModel::class.java] }
     }
     val activeViewModel = viewModel ?: resolvedViewModel
-    val bufferedPosition by (activeViewModel?.bufferedPosition ?: kotlinx.coroutines.flow.MutableStateFlow(bufferedPosition)).collectAsStateWithLifecycle()
     val engineMediaTitle by (activeViewModel?.mediaTitle ?: kotlinx.coroutines.flow.MutableStateFlow("")).collectAsStateWithLifecycle()
     val currentUri by (activeViewModel?.currentUri ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsStateWithLifecycle()
     val activeVideoWidth by (activeViewModel?.videoWidth ?: kotlinx.coroutines.flow.MutableStateFlow(0L)).collectAsStateWithLifecycle()
@@ -789,8 +783,6 @@ fun PlayerScreen(
                             showControlGradients = playbackSettings.showControlGradients,
                             isSmartEnhanceEnabled = playbackSettings.enhanceMode != EnhanceMode.OFF,
                             currentPosition = currentPosition,
-                            bufferedPosition = bufferedPosition,
-                            isNetworkStream = isNetworkStream,
                             duration = duration,
                             isDragging = isDragging,
                             onDraggingChanged = { isDragging = it },
@@ -858,8 +850,6 @@ fun PlayerScreen(
                              onScreenshotClick = {
                                 activeViewModel?.enterFrameCaptureMode()
                              },
-                             ytdlQuality = playbackSettings.ytdlQuality,
-                            onShowQuality = { showQualitySideSheet = true },
                             modifier = Modifier
                         )
                     }
@@ -984,18 +974,6 @@ fun PlayerScreen(
             }
         }
 
-        QualitySettingsSideSheet(
-            visible = showQualitySideSheet,
-            playbackSettings = playbackSettings,
-            onSelectQuality = { quality ->
-                activeViewModel?.changeYtdlQuality(quality)
-            },
-            onDataSaverToggled = { enabled ->
-                activeViewModel?.toggleDataSaver(enabled)
-            },
-            onDismiss = { showQualitySideSheet = false }
-        )
-
         AudioSettingsSideSheet(
             visible = showAudioSettingsSideSheet,
             audioTracks = audioTracks,
@@ -1069,23 +1047,6 @@ fun PlayerScreen(
             onUpdateEnhanceHue = onUpdateEnhanceHue,
             onDismiss = { showEnhanceSettingsSideSheet = false }
         )
-
-        if (!isInPipMode && isNetworkStream) {
-            AnimatedVisibility(
-                visible = controlsVisible && !isLocked,
-                enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
-                exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(top = 70.dp, end = 16.dp)
-            ) {
-                StreamingDataPanel(
-                    speedBps = networkSpeedBytesPerSec,
-                    bufferSec = bufferDurationSeconds
-                )
-            }
-        }
 
         if (isLocked) {
             // Auto-hide the unlock button after 3 seconds

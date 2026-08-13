@@ -161,8 +161,6 @@ object MpvAutoCompleteProvider {
             configOption("loop-playlist", "<no|inf|count>", "Loop the playlist."),
             configOption("shuffle", "<yes|no>", "Shuffle playlist playback."),
             configOption("speed", "<number>", "Set playback speed."),
-            configOption("ytdl", "<yes|no>", "Enable youtube-dl / yt-dlp hook."),
-            configOption("ytdl-path", "<path>", "Path to youtube-dl / yt-dlp."),
             configOption("cache", "<yes|no|auto>", "Control stream cache usage."),
             configOption("demuxer-max-bytes", "<size>", "Limit demuxer cache size."),
             configOption("demuxer-max-back-bytes", "<size>", "Limit backward cache size."),

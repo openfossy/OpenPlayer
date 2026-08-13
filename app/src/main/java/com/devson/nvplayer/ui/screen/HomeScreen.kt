@@ -71,8 +71,7 @@ fun HomeScreen(
     onSearch: (String) -> Unit,
     onBrowseClick: () -> Unit,
     onFeedClick: () -> Unit,
-    onSeeMoreHistoryClick: () -> Unit,
-    onNetworkHistoryClick: () -> Unit
+    onSeeMoreHistoryClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -117,13 +116,12 @@ fun HomeScreen(
             if (found != null) {
                 found
             } else {
-                val isNetwork = historyEntry.uri.startsWith("http") || historyEntry.uri.startsWith("ytdl")
                 val fileName = historyEntry.videoTitle ?: (Uri.parse(historyEntry.uri).lastPathSegment?.substringBeforeLast('.') ?: "Video")
                 Video(
                     uri = historyEntry.uri,
                     title = fileName,
                     duration = historyEntry.durationMs,
-                    folderName = if (isNetwork) "Network" else "External",
+                    folderName = "External",
                     path = historyEntry.uri,
                     size = historyEntry.fileSize,
                     width = 0,
@@ -144,9 +142,6 @@ fun HomeScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     val storageInfo by homeViewModel.storageInfo.collectAsState()
-
-    var showNetworkDialog by remember { mutableStateOf(false) }
-    var showYtdlpMissingDialog by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
     val isFabExpanded = remember { derivedStateOf { !scrollState.isScrollInProgress } }
@@ -171,8 +166,7 @@ fun HomeScreen(
                         onPlay = {
                             val playlist = listOf(Uri.parse(lastPlayedVideo.uri))
                             onVideoClick(Uri.parse(lastPlayedVideo.uri), playlist)
-                        },
-                        onNetworkStreamClick = { showNetworkDialog = true }
+                        }
                     )
                 }
             }
@@ -221,23 +215,6 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = { showNetworkDialog = true },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                        ),
-                        modifier = Modifier.border(
-                            1.dp,
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                            CircleShape
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Language,
-                            contentDescription = "Network Stream",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
                     IconButton(
                         onClick = onSettingsClick,
                         colors = IconButtonDefaults.iconButtonColors(
@@ -669,72 +646,6 @@ fun HomeScreen(
         }
     }
 
-    if (showNetworkDialog) {
-        NetworkStreamDialog(
-            onDismiss = { showNetworkDialog = false },
-            onPlay = { uri ->
-                val uriString = uri.toString().lowercase(java.util.Locale.ROOT)
-                val isYoutube = uriString.contains("youtube") || uriString.contains("youtu.be")
-                val isYtdlpInstalled = java.io.File(
-                    com.devson.nvplayer.player.ytdlp.YtdlpManager.getYtdlDir(context),
-                    "yt-dlp"
-                ).exists()
-
-                if (isYoutube && !isYtdlpInstalled) {
-                    showNetworkDialog = false
-                    showYtdlpMissingDialog = true
-                } else {
-                    showNetworkDialog = false
-                    onVideoClick(uri, listOf(uri))
-                }
-            },
-            onHistoryClick = {
-                showNetworkDialog = false
-                onNetworkHistoryClick()
-            }
-        )
-    }
-
-    if (showYtdlpMissingDialog) {
-        AlertDialog(
-            onDismissRequest = { showYtdlpMissingDialog = false },
-            title = {
-                Text(
-                    text = "yt-dlp Required",
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.titleLarge
-                )
-            },
-            text = {
-                Text(
-                    text = "This stream requires yt-dlp to extract the video. Please install yt-dlp first under App Settings to play YouTube videos.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showYtdlpMissingDialog = false
-                        onSettingsClick()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("Go to Settings")
-                }
-            },
-                    dismissButton = {
-                TextButton(onClick = { showYtdlpMissingDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            shape = RoundedCornerShape(24.dp)
-        )
-    }
-
     selectedVideoForInfo?.let { video ->
         VideoInfoDialog(
             video = video,
@@ -1092,138 +1003,6 @@ fun FolderCard(
     }
 }
 
-@Composable
-fun NetworkStreamDialog(
-    onDismiss: () -> Unit,
-    onPlay: (Uri) -> Unit,
-    onHistoryClick: () -> Unit
-) {
-    val context = LocalContext.current
-    val clipboardManager = remember(context) { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
-    var urlText by remember { mutableStateOf("") }
-    var errorText by remember { mutableStateOf<String?>(null) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Play Network Stream",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge
-                )
-                IconButton(onClick = onHistoryClick) {
-                    Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Filled.History,
-                        contentDescription = "Stream History",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Enter a video stream URL (HTTP/HTTPS, HLS, RTMP, etc.) to stream directly in the player.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(
-                    value = urlText,
-                    onValueChange = { 
-                        urlText = it
-                        errorText = null
-                    },
-                    placeholder = { Text("https://example.com/video.mp4") },
-                    singleLine = true,
-                    isError = errorText != null,
-                    trailingIcon = {
-                        if (urlText.isNotEmpty()) {
-                            IconButton(onClick = { urlText = "" }) {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = "Clear Text"
-                                )
-                            }
-                        } else {
-                            IconButton(onClick = {
-                                val clipText = clipboardManager.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()
-                                if (!clipText.isNullOrBlank()) {
-                                    urlText = clipText
-                                    errorText = null
-                                }
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentPaste,
-                                    contentDescription = "Paste Clipboard"
-                                )
-                            }
-                        }
-                    },
-                    supportingText = {
-                        if (errorText != null) {
-                            Text(
-                                    text = errorText ?: "",
-                                    color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                TextButton(
-                    onClick = {
-                        urlText = "https://storage.googleapis.com/exoplayer-test-media-0/BigBuckBunny_320x180.mp4"
-                        errorText = null
-                    },
-                    modifier = Modifier.align(Alignment.Start)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Load Demo")
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val trimmed = urlText.trim()
-                    if (trimmed.isBlank()) {
-                        errorText = "URL cannot be empty"
-                    } else {
-                        val parsedUri = runCatching { Uri.parse(trimmed) }.getOrNull()
-                        if (parsedUri == null || parsedUri.scheme.isNullOrBlank()) {
-                            errorText = "Please enter a valid URL"
-                        } else {
-                            onPlay(parsedUri)
-                        }
-                    }
-                },
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("Play")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-        shape = RoundedCornerShape(24.dp)
-    )
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

@@ -322,11 +322,7 @@ object MpvHelpData {
         option("script", "<path>", "Load a script file (JavaScript or Lua)."),
         option("scripts", "<path-list>", "Load multiple script files."),
         option("script-opts", "<key=value,...>", "Set script options (passed to scripts)."),
-        option("lua", "<path>", "Load a Lua script (deprecated, use --script)."),
-        option("ytdl", "<yes|no>", "Enable youtube-dl/yt-dlp integration."),
-        option("ytdl-path", "<path>", "Path to yt-dlp binary."),
-        option("ytdl-format", "<format>", "yt-dlp format selector string."),
-        option("ytdl-raw-options", "<key=val,...>", "Raw options passed to yt-dlp."),
+        option("lua", "<path>", "Load a Lua script (deprecated, use --script).")
     )
 
     private val configGeneral = listOf(

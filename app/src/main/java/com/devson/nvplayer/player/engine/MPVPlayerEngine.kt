@@ -8,7 +8,6 @@ import com.devson.nvplayer.player.model.AspectMode
 import com.devson.nvplayer.player.model.ChapterInfo
 import com.devson.nvplayer.player.model.DecoderMode
 import com.devson.nvplayer.player.model.TrackInfo
-import com.devson.nvplayer.player.ytdlp.YtdlpManager
 import `is`.xyz.mpv.MPVLib
 import `is`.xyz.mpv.MPVNode
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -132,20 +131,9 @@ class MPVPlayerEngine(private val context: Context) : PlayerEngine, MPVLib.Event
 
             // Enable cache
             MPVLib.setOptionString("cache", "yes")
-
-            // Configure cache sizes and read-ahead thresholds based on Data Saver state
-            if (settings.isDataSaverEnabled) {
-                MPVLib.setOptionString("demuxer-max-bytes", "${50 * 1024 * 1024}")
-                MPVLib.setOptionString("demuxer-readahead-secs", "60")
-            } else {
-                MPVLib.setOptionString("demuxer-max-bytes", "${400 * 1024 * 1024}")
-                MPVLib.setOptionString("demuxer-readahead-secs", "300")
-            }
-
-            // Keep a healthy back-buffer (for rewinding)
+            MPVLib.setOptionString("demuxer-max-bytes", "${100 * 1024 * 1024}")
+            MPVLib.setOptionString("demuxer-readahead-secs", "60")
             MPVLib.setOptionString("demuxer-max-back-bytes", "${50 * 1024 * 1024}")
-
-            YtdlpManager.setupMpvOptions(context, settings)
 
             // Load and apply custom options from mpv.conf if it exists
             val mpvConfFile = File(context.filesDir, "mpv.conf")

@@ -23,7 +23,6 @@ import com.devson.nvplayer.player.engine.PlayerState
 import com.devson.nvplayer.player.model.TrackInfo
 import com.devson.nvplayer.player.model.ChapterInfo
 import com.devson.nvplayer.player.model.DecoderMode
-import com.devson.nvplayer.player.ytdlp.YtdlpManager
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -172,22 +171,6 @@ class PlayerViewModel(
         _savedVolume.value = playerPrefs.getInt("volume", -1)
         _audioBoosterEnabled.value = playerPrefs.getBoolean("audio_booster_enabled", false)
         _audioBoostVolume.value = playerPrefs.getInt("audio_boost_volume", 200)
-
-        // Observe mediaTitle changes to update the network stream history title in the database
-        viewModelScope.launch {
-            (mediaTitle as kotlinx.coroutines.flow.Flow<String>)
-                .distinctUntilChanged()
-                .debounce(500L)
-                .collectLatest { title ->
-                    val uri = _currentUri.value
-                    if (uri != null && !title.isNullOrBlank() && isNetworkStream.value) {
-                        withContext(Dispatchers.IO) {
-                            val dao = AppDatabase.getDatabase(getApplication()).watchHistoryDao()
-                            dao.insertOrUpdateStream(uri.toString(), title)
-                        }
-                    }
-                }
-        }
 
         // Observe Ambient Mode setting and style changes and pass to native MPV engine
         viewModelScope.launch {
@@ -498,30 +481,25 @@ class PlayerViewModel(
         // Save progress as 0 if not already present, and update timestamp
         viewModelScope.launch(Dispatchers.IO) {
             val dao = AppDatabase.getDatabase(getApplication()).watchHistoryDao()
-            if (isNetworkStream.value) {
-                dao.insertOrUpdateStream(uri.toString(), null)
+            val existing = dao.getHistory(uri.toString())
+            if (existing == null) {
+                dao.insert(
+                    WatchHistoryEntity(
+                        uri = uri.toString(),
+                        lastPositionMs = 0L,
+                        lastPlayedAt = System.currentTimeMillis()
+                    )
+                )
             } else {
-                val existing = dao.getHistory(uri.toString())
-                if (existing == null) {
-                    dao.insert(
-                        WatchHistoryEntity(
-                            uri = uri.toString(),
-                            lastPositionMs = 0L,
-                            lastPlayedAt = System.currentTimeMillis(),
-                            isNetworkStream = false
-                        )
+                dao.insert(
+                    WatchHistoryEntity(
+                        uri = uri.toString(),
+                        lastPositionMs = existing.lastPositionMs,
+                        lastPlayedAt = System.currentTimeMillis(),
+                        isNetworkStream = existing.isNetworkStream,
+                        videoTitle = existing.videoTitle
                     )
-                } else {
-                    dao.insert(
-                        WatchHistoryEntity(
-                            uri = uri.toString(),
-                            lastPositionMs = existing.lastPositionMs,
-                            lastPlayedAt = System.currentTimeMillis(),
-                            isNetworkStream = existing.isNetworkStream,
-                            videoTitle = existing.videoTitle
-                        )
-                    )
-                }
+                )
             }
         }
 
@@ -622,30 +600,25 @@ class PlayerViewModel(
         // Save progress as 0 if not already present, and update timestamp
         viewModelScope.launch(Dispatchers.IO) {
             val dao = AppDatabase.getDatabase(getApplication()).watchHistoryDao()
-            if (isNetworkStream.value) {
-                dao.insertOrUpdateStream(uri.toString(), null)
+            val existing = dao.getHistory(uri.toString())
+            if (existing == null) {
+                dao.insert(
+                    WatchHistoryEntity(
+                        uri = uri.toString(),
+                        lastPositionMs = 0L,
+                        lastPlayedAt = System.currentTimeMillis()
+                    )
+                )
             } else {
-                val existing = dao.getHistory(uri.toString())
-                if (existing == null) {
-                    dao.insert(
-                        WatchHistoryEntity(
-                            uri = uri.toString(),
-                            lastPositionMs = 0L,
-                            lastPlayedAt = System.currentTimeMillis(),
-                            isNetworkStream = false
-                        )
+                dao.insert(
+                    WatchHistoryEntity(
+                        uri = uri.toString(),
+                        lastPositionMs = existing.lastPositionMs,
+                        lastPlayedAt = System.currentTimeMillis(),
+                        isNetworkStream = existing.isNetworkStream,
+                        videoTitle = existing.videoTitle
                     )
-                } else {
-                    dao.insert(
-                        WatchHistoryEntity(
-                            uri = uri.toString(),
-                            lastPositionMs = existing.lastPositionMs,
-                            lastPlayedAt = System.currentTimeMillis(),
-                            isNetworkStream = existing.isNetworkStream,
-                            videoTitle = existing.videoTitle
-                        )
-                    )
-                }
+                )
             }
         }
 
@@ -846,100 +819,6 @@ class PlayerViewModel(
 
     fun selectChapter(index: Int) {
         playerEngine.selectChapter(index)
-    }
-
-    fun changeYtdlQuality(quality: Int) {
-        viewModelScope.launch {
-            settingsRepo.updateYtdlQuality(quality)
-            val updatedSettings = settingsRepo.playbackSettingsFlow.value.copy(ytdlQuality = quality)
-            
-            val uri = _currentUri.value
-            if (uri != null && isNetworkStream.value) {
-                val currentPos = playerEngine.currentPosition.value
-                val isPlayingBefore = playerEngine.isPlaying.value
-                
-                Log.d("PlayerViewModel", "Reloading stream with new quality: $quality at pos: $currentPos")
-                
-                // Save progress to watch history first so it is restored on reload
-                withContext(Dispatchers.IO) {
-                    val dao = AppDatabase.getDatabase(getApplication()).watchHistoryDao()
-                    val existing = dao.getHistory(uri.toString())
-                    dao.insert(
-                        WatchHistoryEntity(
-                            uri = uri.toString(),
-                            lastPositionMs = currentPos,
-                            lastPlayedAt = System.currentTimeMillis(),
-                            isNetworkStream = existing?.isNetworkStream ?: isNetworkStream.value,
-                            videoTitle = existing?.videoTitle ?: mediaTitle.value
-                        )
-                    )
-                }
-                
-                isPositionRestored = false
-                
-                // Re-apply options in the running MPV engine
-                YtdlpManager.setupMpvOptions(getApplication(), updatedSettings)
-                
-                // Force reload of the video
-                playerEngine.loadVideo(uri)
-                
-                if (isPlayingBefore) {
-                    playerEngine.play()
-                }
-            }
-        }
-    }
-
-    fun toggleDataSaver(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepo.updateDataSaverEnabled(enabled)
-            val updatedSettings = settingsRepo.playbackSettingsFlow.value.copy(isDataSaverEnabled = enabled)
-            
-            val uri = _currentUri.value
-            if (uri != null && isNetworkStream.value) {
-                val currentPos = playerEngine.currentPosition.value
-                val isPlayingBefore = playerEngine.isPlaying.value
-                
-                Log.d("PlayerViewModel", "Reloading stream with Data Saver = $enabled at pos: $currentPos")
-                
-                // Save progress to watch history first so it is restored on reload
-                withContext(Dispatchers.IO) {
-                    val dao = AppDatabase.getDatabase(getApplication()).watchHistoryDao()
-                    val existing = dao.getHistory(uri.toString())
-                    dao.insert(
-                        WatchHistoryEntity(
-                            uri = uri.toString(),
-                            lastPositionMs = currentPos,
-                            lastPlayedAt = System.currentTimeMillis(),
-                            isNetworkStream = existing?.isNetworkStream ?: isNetworkStream.value,
-                            videoTitle = existing?.videoTitle ?: mediaTitle.value
-                        )
-                    )
-                }
-                
-                isPositionRestored = false
-                
-                // Re-apply options in the running MPV engine
-                YtdlpManager.setupMpvOptions(getApplication(), updatedSettings)
-                
-                // Update cache and buffer limits dynamically
-                try {
-                    val readaheadSecs = if (enabled) 60 else 300
-                    val maxBytes = if (enabled) 50 * 1024 * 1024 else 400 * 1024 * 1024
-                    `is`.xyz.mpv.MPVLib.setPropertyString("demuxer-readahead-secs", "$readaheadSecs")
-                    `is`.xyz.mpv.MPVLib.setPropertyString("demuxer-max-bytes", "$maxBytes")
-                } catch (e: Exception) {
-                    Log.e("PlayerViewModel", "Failed to update demuxer cache options dynamically", e)
-                }
-
-                // Force reload of the video
-                playerEngine.loadVideo(uri)
-                
-                if (isPlayingBefore) {
-                    playerEngine.play()
-                }
-            }
-        }
     }
 
     fun cycleDecoder() {

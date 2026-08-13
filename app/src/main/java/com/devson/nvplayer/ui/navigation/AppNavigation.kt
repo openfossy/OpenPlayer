@@ -29,7 +29,6 @@ import com.devson.nvplayer.ui.screen.settings.CreditsScreen
 import com.devson.nvplayer.ui.screen.settings.FolderScreen
 import com.devson.nvplayer.ui.screen.videolist.VideoListScreen
 import com.devson.nvplayer.ui.screen.FeedScreen
-import com.devson.nvplayer.ui.screen.settings.YtdlpSettingsScreen
 import com.devson.nvplayer.ui.screen.settings.MpvConfigSettingsScreen
 import com.devson.nvplayer.viewmodel.HomeViewModel
 import com.devson.nvplayer.viewmodel.PlayerViewModel
@@ -51,7 +50,6 @@ import com.devson.nvplayer.ui.screen.settings.ToolScreen
 import com.devson.nvplayer.ui.screens.settings.MilliSecondScreen
 import com.devson.nvplayer.ui.screens.settings.MediaStoreFinderScreen
 import com.devson.nvplayer.ui.screen.editor.MpvHelpScreen
-import com.devson.nvplayer.ui.screen.NetworkHistoryScreen
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
@@ -235,36 +233,6 @@ fun AppNavigation(
                     navController.navigate("history") {
                         launchSingleTop = true
                     }
-                },
-                onNetworkHistoryClick = {
-                    navController.navigate("network_history") {
-                        launchSingleTop = true
-                    }
-                }
-            )
-        }
-
-        composable("network_history") {
-            NetworkHistoryScreen(
-                homeViewModel = homeViewModel,
-                onBack = safePopBackStack,
-                onPlayStream = { uri ->
-                    val playerVm = playerViewModel()
-                    val dummyVideo = Video(
-                        uri = uri.toString(),
-                        title = uri.lastPathSegment?.substringBeforeLast('.') ?: "Stream",
-                        duration = 0L,
-                        folderName = "",
-                        path = uri.path ?: "",
-                        size = 0L,
-                        width = 0,
-                        height = 0
-                    )
-                    playerVm.setQueue(listOf(dummyVideo))
-                    playerVm.prepareVideo(uri, listOf(uri))
-                    navController.navigate("player") {
-                        launchSingleTop = true
-                    }
                 }
             )
         }
@@ -304,29 +272,6 @@ fun AppNavigation(
                 },
                 onNavigateToFeed = { startIndex ->
                     navController.navigate("feed/$startIndex") {
-                        launchSingleTop = true
-                    }
-                },
-                onPlayStream = { uri ->
-                    val playerVm = playerViewModel()
-                    val dummyVideo = Video(
-                        uri = uri.toString(),
-                        title = uri.lastPathSegment?.substringBeforeLast('.') ?: "Stream",
-                        duration = 0L,
-                        folderName = "",
-                        path = uri.path ?: "",
-                        size = 0L,
-                        width = 0,
-                        height = 0
-                    )
-                    playerVm.setQueue(listOf(dummyVideo))
-                    playerVm.prepareVideo(uri, listOf(uri))
-                    navController.navigate("player") {
-                        launchSingleTop = true
-                    }
-                },
-                onNetworkHistoryClick = {
-                    navController.navigate("network_history") {
                         launchSingleTop = true
                     }
                 },
@@ -381,7 +326,6 @@ fun AppNavigation(
                 onNavigateToScanFolders = { navController.navigate("folder_settings") { launchSingleTop = true } },
                 onNavigateToTool = { navController.navigate("tools") { launchSingleTop = true } },
                 onNavigateToRecycleBin = { navController.navigate("recycle_bin") { launchSingleTop = true } },
-                onNavigateToYtdlpSettings = { navController.navigate("ytdlp_settings") { launchSingleTop = true } },
                 onNavigateToMpvConfig = { navController.navigate("mpv_config") { launchSingleTop = true } },
                 settingsViewModel = settingsViewModel
             )
@@ -398,13 +342,6 @@ fun AppNavigation(
         composable("mpv_help") {
             MpvHelpScreen(
                 onNavigateBack = safePopBackStack
-            )
-        }
-
-        composable("ytdlp_settings") {
-            YtdlpSettingsScreen(
-                onNavigateBack = safePopBackStack,
-                settingsViewModel = settingsViewModel
             )
         }
 
@@ -588,6 +525,7 @@ fun AppNavigation(
             val isNetworkStream by playerVm.isNetworkStream.collectAsStateWithLifecycle()
             val bufferedPosition by playerVm.bufferedPosition.collectAsStateWithLifecycle()
 
+
             val isDynamicSpeedActive by playerVm.isDynamicSpeedActive.collectAsStateWithLifecycle()
             val queueList by playerVm.queueList.collectAsStateWithLifecycle()
             val currentVideoId by playerVm.currentVideoId.collectAsStateWithLifecycle()
@@ -596,10 +534,6 @@ fun AppNavigation(
             PlayerScreen(
                 isDynamicSpeedActive = isDynamicSpeedActive,
                 onSetDynamicSpeedActive = { playerVm.setDynamicSpeedActive(it) },
-                networkSpeedBytesPerSec = networkSpeedBytesPerSec,
-                bufferDurationSeconds = bufferDurationSeconds,
-                isNetworkStream = isNetworkStream,
-                bufferedPosition = bufferedPosition,
                 audioBoostVolume = audioBoostVolume,
                 onSetAudioBoostVolume = { playerVm.setAudioBoostVolume(it) },
                 playbackState = playbackState,
@@ -733,4 +667,4 @@ private fun getLogicalQueue(
     } else {
         playlist
     }
-}
+}

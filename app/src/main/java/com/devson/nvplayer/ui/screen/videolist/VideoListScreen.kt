@@ -50,7 +50,6 @@ import com.devson.nvplayer.ui.common.sheets.ViewSettingsBottomSheet
 import com.devson.nvplayer.ui.screen.videolist.components.folder.FolderListContent
 import com.devson.nvplayer.ui.common.sheets.InformationBottomSheet
 import com.devson.nvplayer.ui.screen.StorageExplorerScreen
-import com.devson.nvplayer.ui.screen.NetworkStreamDialog
 import com.devson.nvplayer.ui.screens.videolist.components.topbar.VideoListTopAppBar
 import com.devson.nvplayer.ui.screen.videolist.components.video.VideoListContent
 import com.devson.nvplayer.ui.screens.videolist.components.explorer.ExplorerListContent
@@ -132,8 +131,6 @@ fun VideoListScreen(
     var searchText by remember { mutableStateOf("") }
     val searchFocusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    var showNetworkDialog by remember { mutableStateOf(false) }
-    var showYtdlpMissingDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(searchActive) {
         if (searchActive) searchFocusRequester.requestFocus()
@@ -354,8 +351,6 @@ fun VideoListScreen(
                 },
                 searchSuggestions = searchSuggestions,
                 searchFocusRequester = searchFocusRequester,
-                keyboard = keyboard,
-                onNetworkStreamClick = { showNetworkDialog = true },
                 onBackToFolders = {
                     if (viewSettings.viewMode == ViewMode.FOLDERS && currentExplorerPath != baseRoot) {
                         viewModel.MapsUpInExplorer()
@@ -554,8 +549,7 @@ fun VideoListScreen(
                             }
                             onVideoSelected(vid, playlist, lastHistoryEntry?.lastPositionMs ?: 0L)
                         }
-                    },
-                    onNetworkStreamClick = { showNetworkDialog = true }
+                    }
                 )
             }
         }
@@ -922,72 +916,6 @@ fun VideoListScreen(
             dismissButton = {
                 TextButton(onClick = { fileOpsViewModel.cancelOverwrite() }) { Text("Cancel") }
             }
-        )
-    }
-
-    if (showNetworkDialog) {
-        NetworkStreamDialog(
-            onDismiss = { showNetworkDialog = false },
-            onPlay = { uri ->
-                val uriString = uri.toString().lowercase(java.util.Locale.ROOT)
-                val isYoutube = uriString.contains("youtube") || uriString.contains("youtu.be")
-                val isYtdlpInstalled = java.io.File(
-                    com.devson.nvplayer.player.ytdlp.YtdlpManager.getYtdlDir(context),
-                    "yt-dlp"
-                ).exists()
-
-                if (isYoutube && !isYtdlpInstalled) {
-                    showNetworkDialog = false
-                    showYtdlpMissingDialog = true
-                } else {
-                    showNetworkDialog = false
-                    onPlayStream(uri)
-                }
-            },
-            onHistoryClick = {
-                showNetworkDialog = false
-                onNetworkHistoryClick()
-            }
-        )
-    }
-
-    if (showYtdlpMissingDialog) {
-        AlertDialog(
-            onDismissRequest = { showYtdlpMissingDialog = false },
-            title = {
-                Text(
-                    text = "yt-dlp Required",
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.titleLarge
-                )
-            },
-            text = {
-                Text(
-                    text = "This stream requires yt-dlp to extract the video. Please install yt-dlp first under App Settings to play YouTube videos.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showYtdlpMissingDialog = false
-                        onNavigateToSettings()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("Go to Settings")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showYtdlpMissingDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            shape = RoundedCornerShape(24.dp)
         )
     }
 }

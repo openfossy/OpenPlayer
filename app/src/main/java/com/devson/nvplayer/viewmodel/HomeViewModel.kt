@@ -35,13 +35,10 @@ class HomeViewModel(
 
     private val dao = AppDatabase.getDatabase(context).watchHistoryDao()
     private var watchHistoryJob: Job? = null
-    
-    val networkHistory = dao.getNetworkStreams()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _history = MutableStateFlow<List<WatchHistory>>(emptyList())
     val history: StateFlow<List<WatchHistory>> = _history.asStateFlow()
- 
+
     val historyMapFlow: StateFlow<Map<String, WatchHistory>> = _history
         .map { list -> list.associateBy { it.uri } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
@@ -100,8 +97,6 @@ class HomeViewModel(
                     val visibleUris = visibleVideos.map { it.uri.toString() }.toSet()
                     _history.value = historyList.filter { item ->
                         visibleUris.contains(item.uri) || 
-                        item.uri.startsWith("http") || 
-                        item.uri.startsWith("ytdl") ||
                         (item.uri.startsWith("file://") && File(Uri.parse(item.uri).path ?: "").exists()) ||
                         (item.uri.startsWith("content://") && !item.uri.contains("media/external/video"))
                     }

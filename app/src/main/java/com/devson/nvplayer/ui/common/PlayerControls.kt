@@ -67,8 +67,6 @@ fun PlayerControls(
     isPlaying: Boolean,
     isSmartEnhanceEnabled: Boolean = false,
     currentPosition: Long,
-    bufferedPosition: Long = 0L,
-    isNetworkStream: Boolean = false,
     duration: Long,
     isDragging: Boolean,
     onDraggingChanged: (Boolean) -> Unit,
@@ -108,8 +106,6 @@ fun PlayerControls(
     currentAspectMode: AspectMode = AspectMode.FIT,
     isBackgroundPlayEnabled: Boolean = false,
     onBackgroundPlayClick: () -> Unit = {},
-    ytdlQuality: Int = -1,
-    onShowQuality: () -> Unit = {},
     isBottomLayoutEnabled: Boolean = false,
     showControlGradients: Boolean = true,
     onTitleClick: () -> Unit = {},
@@ -202,7 +198,6 @@ fun PlayerControls(
         val filterButtons = { list: List<PlayerButton> ->
             list.filter { button ->
                 if (button == PlayerButton.CHAPTERS && !hasChapters) return@filter false
-                if (button == PlayerButton.STREAM_QUALITY && !isNetworkStream) return@filter false
                 true
             }
         }
@@ -257,8 +252,6 @@ fun PlayerControls(
                 currentAspectMode = currentAspectMode,
                 isBackgroundPlayEnabled = isBackgroundPlayEnabled,
                 onBackgroundPlayClick = onBackgroundPlayClick,
-                ytdlQuality = ytdlQuality,
-                onShowQuality = onShowQuality,
                 onTitleClick = onTitleClick,
                 onScreenshotClick = onScreenshotClick
             )
@@ -492,11 +485,7 @@ fun PlayerControls(
             topLeftButtons + topRightButtons + bottomLeftButtons + bottomRightButtons
         }
 
-        val effectiveTopRight = if (isNetworkStream && !allActiveButtons.contains(PlayerButton.STREAM_QUALITY)) {
-            rawTopRight + PlayerButton.STREAM_QUALITY
-        } else {
-            rawTopRight
-        }
+        val effectiveTopRight = rawTopRight
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -538,8 +527,6 @@ fun PlayerControls(
                         currentAspectMode = currentAspectMode,
                         isBackgroundPlayEnabled = isBackgroundPlayEnabled,
                         onBackgroundPlayClick = onBackgroundPlayClick,
-                        ytdlQuality = ytdlQuality,
-                        onShowQuality = onShowQuality,
                         onTitleClick = onTitleClick,
                         onScreenshotClick = onScreenshotClick
                     )
@@ -577,8 +564,6 @@ fun PlayerControls(
                         currentAspectMode = currentAspectMode,
                         isBackgroundPlayEnabled = isBackgroundPlayEnabled,
                         onBackgroundPlayClick = onBackgroundPlayClick,
-                        ytdlQuality = ytdlQuality,
-                        onShowQuality = onShowQuality,
                         onTitleClick = onTitleClick,
                         onScreenshotClick = onScreenshotClick
                     )
@@ -763,7 +748,7 @@ fun PlayerControls(
                 },
                 seekbarStyle = seekBarStyle,
                 isPaused = !isPlaying,
-                bufferedDuration = if (isNetworkStream && bufferedPosition > currentPosition) (bufferedPosition - currentPosition).toFloat() else 0f,
+                bufferedDuration = 0f,
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             )
 
@@ -1006,8 +991,6 @@ fun RenderPlayerButton(
     currentAspectMode: AspectMode = AspectMode.FIT,
     isBackgroundPlayEnabled: Boolean = false,
     onBackgroundPlayClick: () -> Unit = {},
-    ytdlQuality: Int = -1,
-    onShowQuality: () -> Unit = {},
     onTitleClick: () -> Unit = {},
     onScreenshotClick: () -> Unit = {}
 ) {
@@ -1045,7 +1028,6 @@ fun RenderPlayerButton(
             PlayerButton.PICTURE_IN_PICTURE -> onPipClick()
             PlayerButton.ASPECT_RATIO -> onAspectClick()
             PlayerButton.BACKGROUND_PLAY -> onBackgroundPlayClick()
-            PlayerButton.STREAM_QUALITY -> onShowQuality()
             PlayerButton.SCREENSHOT -> onScreenshotClick()
             PlayerButton.SCREEN_ROTATION -> {
                 activity?.let { act ->
@@ -1108,15 +1090,6 @@ fun RenderPlayerButton(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 4.dp)
                 )
-            } else if (button == PlayerButton.STREAM_QUALITY) {
-                val label = if (ytdlQuality == -1) "Auto" else "${ytdlQuality}p"
-                Text(
-                    text = label,
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
             } else {
                 val icon = if (button == PlayerButton.ASPECT_RATIO) {
                     when (currentAspectMode) {
@@ -1174,14 +1147,6 @@ fun RenderPlayerButton(
             if (button == PlayerButton.DECODER) {
                 Text(
                     text = currentDecoder,
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            } else if (button == PlayerButton.STREAM_QUALITY) {
-                val label = if (ytdlQuality == -1) "Auto" else "${ytdlQuality}p"
-                Text(
-                    text = label,
                     color = Color.White,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold

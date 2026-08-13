@@ -43,7 +43,6 @@ fun SettingsScreen(
     onNavigateToPlayerInterface: () -> Unit = {},
     onNavigateToCustomHome: () -> Unit = {},
     onNavigateToGestures: () -> Unit = {},
-    onNavigateToYtdlpSettings: () -> Unit = {},
     onNavigateToMpvConfig: () -> Unit = {},
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
@@ -175,20 +174,6 @@ fun SettingsScreen(
                             title = "Custom Home",
                             subtitle = "Customize Home Screen Layout",
                             onClick = onNavigateToCustomHome
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                        SettingsItemRow(
-                            icon = Icons.Default.Cloud,
-                            title = "yt-dlp Streaming",
-                            subtitle = "Configure format preferences and environment",
-                            onClick = onNavigateToYtdlpSettings
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
                         SettingsItemRow(
                             icon = Icons.Default.Settings,

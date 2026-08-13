@@ -80,7 +80,7 @@ fun PreviewFloatingActionButton(
     previewDurationMs: Long,
     previewLastPositionMs: Long,
     onPlay: () -> Unit,
-    onNetworkStreamClick: () -> Unit
+    onNetworkStreamClick: (() -> Unit)? = null
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
@@ -122,15 +122,17 @@ fun PreviewFloatingActionButton(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Option 1: Network Stream
-                SpeedDialItem(
-                    label = "Network Stream",
-                    icon = Icons.Rounded.Language,
-                    onClick = {
-                        isMenuExpanded = false
-                        onNetworkStreamClick()
-                    }
-                )
+                // Option 1: Network Stream (If callback is present)
+                if (onNetworkStreamClick != null) {
+                    SpeedDialItem(
+                        label = "Network Stream",
+                        icon = Icons.Rounded.Language,
+                        onClick = {
+                            isMenuExpanded = false
+                            onNetworkStreamClick()
+                        }
+                    )
+                }
 
                 // Option 2: Last Played Video Card (if preview is available and enabled)
                 if (enablePreview && previewUri != null) {
