@@ -49,8 +49,8 @@ The transition from ExoPlayer to `is.xyz.mpv` allows Open Player to offer a trul
 > > ### Clone & Build
 
 ```bash
-git clone https://github.com/DevSon1024/Nosved-Player.git
-cd Nosved-Player
+git clone https://github.com/DevSon1024/OpenPlayer.git
+cd OpenPlayer
 ./gradlew assembleRelease
 ```
 
@@ -64,13 +64,8 @@ Special thanks to [**Ritesh Pandit (@Riteshp2001)**](https://github.com/Riteshp2
 
 ---
 
-<!--
-## Star History
+## Origin
 
-<a href="https://www.star-history.com/?repos=Devson1024%2Fnosved-player&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Devson1024/nosved-player&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Devson1024/nosved-player&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Devson1024/nosved-player&type=date&legend=top-left" />
- </picture>
-</a> -->
+OpenPlayer is based on the original [Nosved Player](https://github.com/DevSon1024/Nosved-Player) project by **[Devendra Sonawane](https://github.com/DevSon1024/)**.
+
+The project has been adapted and is maintained as an independent open-source project under the **OpenFossy** organization.
