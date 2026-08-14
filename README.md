@@ -2,7 +2,7 @@
 
 ![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-100%25-B125EA?logo=kotlin&logoColor=white)
-[![Downloads](https://img.shields.io/github/downloads/DevSon1024/Nosved-Player/total?logo=github)](https://github.com/DevSon1024/Nosved-Player/releases)
+[![Downloads](https://img.shields.io/github/downloads/OpenFossy/OpenPlayer/total?logo=github)](https://github.com/OpenFossy/OpenPlayer/releases)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 
 Open Player is a high-performance, native Android video player built with a focus on absolute playback smoothness, clean aesthetics, and extensive user customization.
@@ -49,7 +49,7 @@ The transition from ExoPlayer to `is.xyz.mpv` allows Open Player to offer a trul
 > > ### Clone & Build
 
 ```bash
-git clone https://github.com/DevSon1024/OpenPlayer.git
+git clone https://github.com/OpenFossy/OpenPlayer.git
 cd OpenPlayer
 ./gradlew assembleRelease
 ```
