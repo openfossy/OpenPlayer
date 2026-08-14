@@ -28,39 +28,55 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.acos
+import kotlin.math.tan
 
-private val NosvedOuterContour = listOf(
-    22.46f to 21.19f, 20.80f to 24.02f, 20.80f to 75.68f, 21.68f to 77.83f,
-    25.10f to 79.49f, 38.18f to 79.49f, 41.02f to 78.42f, 42.48f to 75.20f,
-    42.68f to 61.52f, 61.23f to 79.00f, 74.80f to 79.49f, 77.44f to 78.61f,
-    79.10f to 75.68f, 78.32f to 22.07f, 75.59f to 20.41f, 59.57f to 20.90f,
-    57.62f to 23.63f, 57.42f to 33.50f, 40.72f to 20.61f
+// Outer hexagon contour: pointy-top, regular hexagon with rounded corners
+private val OpenPlayerHexagonContour = listOf(
+    50.00f to 6.50f,   // Top vertex
+    87.67f to 28.25f,  // Top-Right vertex
+    87.67f to 71.75f,  // Bottom-Right vertex
+    50.00f to 93.50f,  // Bottom vertex
+    12.33f to 71.75f,  // Bottom-Left vertex
+    12.33f to 28.25f   // Top-Left vertex
 )
 
-private val NosvedBarsHoleContour = listOf(
-    24.02f to 22.95f, 39.84f to 22.75f, 59.96f to 38.48f, 60.74f to 22.95f,
-    76.37f to 23.44f, 75.98f to 76.76f, 62.01f to 76.76f, 46.29f to 61.72f,
-    46.58f to 59.28f, 62.89f to 49.12f, 41.31f to 35.94f, 40.04f to 38.38f,
-    40.04f to 75.78f, 38.38f to 77.15f, 23.73f to 76.56f
+// Inner left bracket: concentric hexagon segment with open top and bottom gaps
+private val OpenPlayerLeftBracketPoints = listOf(
+    41.50f to 25.91f,  // Upper-left diagonal end
+    24.89f to 35.50f,  // Top-Left corner
+    24.89f to 64.50f,  // Bottom-Left corner
+    41.50f to 74.09f   // Lower-left diagonal end
 )
 
-private val NosvedTriangleHoleContour = listOf(
-    44.34f to 41.60f, 56.45f to 48.93f, 55.86f to 50.20f,
-    44.82f to 56.54f, 43.26f to 55.76f, 43.26f to 42.58f
+// Inner right bracket: mirror concentric hexagon segment
+private val OpenPlayerRightBracketPoints = listOf(
+    58.50f to 25.91f,  // Upper-right diagonal end
+    75.11f to 35.50f,  // Top-Right corner
+    75.11f to 64.50f,  // Bottom-Right corner
+    58.50f to 74.09f   // Lower-right diagonal end
 )
 
-/** Builds a closed Path from a percentage-space polygon, rounding every vertex. */
-private fun buildRoundedContour(
+// Center play button triangle: equilateral play icon with rounded corners, optically centered
+private val OpenPlayerTriangleContour = listOf(
+    42.00f to 36.50f,  // Top-Left vertex
+    42.00f to 63.50f,  // Bottom-Left vertex
+    65.00f to 50.00f   // Right tip vertex
+)
+
+/**
+ * Builds a closed Path with smooth circular arc corner fillets using cubic Bezier curves.
+ */
+private fun buildSmoothRoundedContour(
     pointsPct: List<Pair<Float, Float>>,
     w: Float,
     h: Float,
@@ -69,6 +85,13 @@ private fun buildRoundedContour(
     val n = pointsPct.size
     val pts = pointsPct.map { Offset(it.first / 100f * w, it.second / 100f * h) }
     val path = Path()
+    if (n < 3) return path
+
+    val startPoints = ArrayList<Offset>(n)
+    val endPoints = ArrayList<Offset>(n)
+    val ctrl1Points = ArrayList<Offset>(n)
+    val ctrl2Points = ArrayList<Offset>(n)
+
     for (i in 0 until n) {
         val curr = pts[i]
         val prev = pts[(i - 1 + n) % n]
@@ -78,19 +101,125 @@ private fun buildRoundedContour(
         val toNext = next - curr
         val prevLen = toPrev.getDistance()
         val nextLen = toNext.getDistance()
-        val r = minOf(cornerRadius, prevLen * 0.45f, nextLen * 0.45f)
 
-        val startPt = if (prevLen > 0f) curr + toPrev / prevLen * r else curr
-        val endPt = if (nextLen > 0f) curr + toNext / nextLen * r else curr
+        if (prevLen == 0f || nextLen == 0f) {
+            startPoints.add(curr)
+            endPoints.add(curr)
+            ctrl1Points.add(curr)
+            ctrl2Points.add(curr)
+            continue
+        }
 
-        if (i == 0) path.moveTo(startPt.x, startPt.y) else path.lineTo(startPt.x, startPt.y)
-        path.quadraticTo(curr.x, curr.y, endPt.x, endPt.y)
+        val uPrev = toPrev / prevLen
+        val uNext = toNext / nextLen
+
+        val dot = (uPrev.x * uNext.x + uPrev.y * uNext.y).coerceIn(-1f, 1f)
+        val alpha = acos(dot)
+        val halfAlpha = alpha / 2f
+        val tanHalfAlpha = tan(halfAlpha)
+
+        val beta = PI.toFloat() - alpha
+        val tanQuarterBeta = tan(beta / 4f)
+
+        val desiredD = if (tanHalfAlpha > 0.001f) cornerRadius / tanHalfAlpha else 0f
+        val maxD = minOf(prevLen * 0.48f, nextLen * 0.48f)
+        val d = minOf(desiredD, maxD)
+        val rEff = d * tanHalfAlpha
+
+        val pStart = curr + uPrev * d
+        val pEnd = curr + uNext * d
+
+        val lCtrl = (4f / 3f) * tanQuarterBeta * rEff
+        val c1 = pStart - uPrev * lCtrl
+        val c2 = pEnd - uNext * lCtrl
+
+        startPoints.add(pStart)
+        endPoints.add(pEnd)
+        ctrl1Points.add(c1)
+        ctrl2Points.add(c2)
+    }
+
+    path.moveTo(startPoints[0].x, startPoints[0].y)
+    for (i in 0 until n) {
+        if (i > 0) {
+            path.lineTo(startPoints[i].x, startPoints[i].y)
+        }
+        path.cubicTo(
+            ctrl1Points[i].x, ctrl1Points[i].y,
+            ctrl2Points[i].x, ctrl2Points[i].y,
+            endPoints[i].x, endPoints[i].y
+        )
     }
     path.close()
     return path
 }
 
-/** Returns the first `progress` fraction (by length) of `path`, for a draw-on reveal. */
+/**
+ * Builds an open Path with smooth circular arc corner fillets on interior vertices.
+ */
+private fun buildSmoothRoundedOpenPath(
+    pointsPct: List<Pair<Float, Float>>,
+    w: Float,
+    h: Float,
+    cornerRadius: Float
+): Path {
+    val pts = pointsPct.map { Offset(it.first / 100f * w, it.second / 100f * h) }
+    val path = Path()
+    if (pts.isEmpty()) return path
+    if (pts.size == 1) {
+        path.moveTo(pts[0].x, pts[0].y)
+        return path
+    }
+
+    path.moveTo(pts[0].x, pts[0].y)
+
+    for (i in 1 until pts.size - 1) {
+        val curr = pts[i]
+        val prev = pts[i - 1]
+        val next = pts[i + 1]
+
+        val toPrev = prev - curr
+        val toNext = next - curr
+        val prevLen = toPrev.getDistance()
+        val nextLen = toNext.getDistance()
+
+        if (prevLen == 0f || nextLen == 0f) {
+            path.lineTo(curr.x, curr.y)
+            continue
+        }
+
+        val uPrev = toPrev / prevLen
+        val uNext = toNext / nextLen
+
+        val dot = (uPrev.x * uNext.x + uPrev.y * uNext.y).coerceIn(-1f, 1f)
+        val alpha = acos(dot)
+        val halfAlpha = alpha / 2f
+        val tanHalfAlpha = tan(halfAlpha)
+
+        val beta = PI.toFloat() - alpha
+        val tanQuarterBeta = tan(beta / 4f)
+
+        val desiredD = if (tanHalfAlpha > 0.001f) cornerRadius / tanHalfAlpha else 0f
+        val maxD = minOf(prevLen * 0.48f, nextLen * 0.48f)
+        val d = minOf(desiredD, maxD)
+        val rEff = d * tanHalfAlpha
+
+        val pStart = curr + uPrev * d
+        val pEnd = curr + uNext * d
+
+        val lCtrl = (4f / 3f) * tanQuarterBeta * rEff
+        val c1 = pStart - uPrev * lCtrl
+        val c2 = pEnd - uNext * lCtrl
+
+        path.lineTo(pStart.x, pStart.y)
+        path.cubicTo(c1.x, c1.y, c2.x, c2.y, pEnd.x, pEnd.y)
+    }
+
+    path.lineTo(pts.last().x, pts.last().y)
+    return path
+}
+
+/** Returns the first `progress` fraction (by length) of `path` for a progressive reveal. */
 private fun trimmedSegment(path: Path, progress: Float): Path {
     val out = Path()
     if (progress <= 0f) return out
@@ -99,7 +228,7 @@ private fun trimmedSegment(path: Path, progress: Float): Path {
     return out
 }
 
-/** Point along `path` at fractional `progress` (0f..1f) - used to lead the stroke with a glow. */
+/** Point along `path` at fractional `progress` (0f..1f) to lead stroke with a glow tip. */
 private fun tipPosition(path: Path, progress: Float): Offset? {
     if (progress <= 0f || progress >= 1f) return null
     val measure = PathMeasure().apply { setPath(path, false) }
@@ -137,10 +266,9 @@ fun AnimatedNosvedLogo(modifier: Modifier, color: Color) {
 }
 
 /**
- * Animated Nosved logo: draws the mark on stroke-by-stroke like a pen (outer
- * silhouette, then the hollow bars, then the play triangle), then solidifies
- * into the crisp filled mark with a soft shine sweep. Triggers automatically
- * the moment this composable enters composition (i.e. on screen entry).
+ * Animated Open Player logo: a hollow rounded hexagon, two concentric bracket accents,
+ * and a center play triangle. Draws smoothly on entry with glowing pen tips,
+ * settles with a gentle spring pop, and enters a subtle breathing idle loop.
  */
 @Composable
 fun AnimatedNosvedLogo(
@@ -153,7 +281,6 @@ fun AnimatedNosvedLogo(
     val containerAlpha = remember { Animatable(if (hasAnimated) 1f else 0f) }
     val containerScale = remember { Animatable(if (hasAnimated) 1f else 0.72f) }
     val drawProgress = remember { Animatable(if (hasAnimated) 1f else 0f) }
-    val fillReveal = remember { Animatable(if (hasAnimated) 1f else 0f) }
 
     LaunchedEffect(hasAnimated) {
         if (!hasAnimated) {
@@ -169,9 +296,8 @@ fun AnimatedNosvedLogo(
             }
             delay(90)
             drawProgress.animateTo(1f, tween(durationMillis = 1150, easing = FastOutSlowInEasing))
-            fillReveal.animateTo(1f, tween(durationMillis = 320, easing = FastOutSlowInEasing))
-            // subtle settle "pop" once the mark has fully solidified
-            containerScale.animateTo(1.05f, tween(120, easing = FastOutSlowInEasing))
+            // subtle settle pop on completion
+            containerScale.animateTo(1.04f, tween(120, easing = FastOutSlowInEasing))
             containerScale.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
@@ -193,17 +319,8 @@ fun AnimatedNosvedLogo(
         ),
         label = "breathe"
     )
-    val shimmer by idleTransition.animateFloat(
-        initialValue = -0.4f,
-        targetValue = 1.4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2600, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmer"
-    )
 
-    val strokeWidthPx = with(LocalDensity.current) { 3.4.dp.toPx() }
+    val strokeWidthPx = with(LocalDensity.current) { 3.6.dp.toPx() }
     val glowRadiusPx = with(LocalDensity.current) { 5.dp.toPx() }
 
     Box(
@@ -216,68 +333,41 @@ fun AnimatedNosvedLogo(
             val w = size.width
             val h = size.height
 
-            val outerPath = buildRoundedContour(NosvedOuterContour, w, h, w * 0.028f)
-            val barsHolePath = buildRoundedContour(NosvedBarsHoleContour, w, h, w * 0.02f)
-            val triHolePath = buildRoundedContour(NosvedTriangleHoleContour, w, h, w * 0.014f)
+            val hexPath = buildSmoothRoundedContour(OpenPlayerHexagonContour, w, h, w * 0.11f)
+            val leftBracketPath = buildSmoothRoundedOpenPath(OpenPlayerLeftBracketPoints, w, h, w * 0.065f)
+            val rightBracketPath = buildSmoothRoundedOpenPath(OpenPlayerRightBracketPoints, w, h, w * 0.065f)
+            val triPath = buildSmoothRoundedContour(OpenPlayerTriangleContour, w, h, w * 0.048f)
 
-            // Phase 1: line-drawing sketch reveal
-            if (drawProgress.value < 1f || fillReveal.value < 1f) {
-                val outerP = stageProgress(drawProgress.value, 0f, 0.5f)
-                val barsP = stageProgress(drawProgress.value, 0.38f, 0.8f)
-                val triP = stageProgress(drawProgress.value, 0.68f, 1f)
-                val sketchAlpha = 1f - fillReveal.value
+            val hexP = stageProgress(drawProgress.value, 0f, 0.44f)
+            val leftBracketP = stageProgress(drawProgress.value, 0.32f, 0.72f)
+            val rightBracketP = stageProgress(drawProgress.value, 0.32f, 0.72f)
+            val triP = stageProgress(drawProgress.value, 0.60f, 1f)
 
-                val strokeStyle = Stroke(strokeWidthPx, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                drawPath(trimmedSegment(outerPath, outerP), color.copy(alpha = sketchAlpha), style = strokeStyle)
-                drawPath(trimmedSegment(barsHolePath, barsP), color.copy(alpha = sketchAlpha), style = strokeStyle)
-                drawPath(trimmedSegment(triHolePath, triP), color.copy(alpha = sketchAlpha), style = strokeStyle)
+            val strokeStyle = Stroke(strokeWidthPx, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            drawPath(trimmedSegment(hexPath, hexP), color = color, style = strokeStyle)
+            drawPath(trimmedSegment(leftBracketPath, leftBracketP), color = color, style = strokeStyle)
+            drawPath(trimmedSegment(rightBracketPath, rightBracketP), color = color, style = strokeStyle)
+            drawPath(trimmedSegment(triPath, triP), color = color, style = strokeStyle)
 
-                // leading glow "pen tip" following whichever stroke is currently drawing
-                val tip = when {
-                    outerP in 0.001f..0.999f -> tipPosition(outerPath, outerP)
-                    barsP in 0.001f..0.999f -> tipPosition(barsHolePath, barsP)
-                    triP in 0.001f..0.999f -> tipPosition(triHolePath, triP)
-                    else -> null
+            // Leading glow tips following the active strokes
+            if (drawProgress.value < 1f) {
+                val tips = buildList {
+                    tipPosition(hexPath, hexP)?.let { add(it) }
+                    tipPosition(leftBracketPath, leftBracketP)?.let { add(it) }
+                    tipPosition(rightBracketPath, rightBracketP)?.let { add(it) }
+                    tipPosition(triPath, triP)?.let { add(it) }
                 }
-                tip?.let { p ->
+                tips.forEach { p ->
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(color.copy(alpha = 0.85f * sketchAlpha), Color.Transparent),
+                            colors = listOf(color.copy(alpha = 0.85f), Color.Transparent),
                             center = p,
                             radius = glowRadiusPx * 2.4f
                         ),
                         radius = glowRadiusPx * 2.4f,
                         center = p
                     )
-                    drawCircle(color = color.copy(alpha = sketchAlpha), radius = glowRadiusPx * 0.55f, center = p)
-                }
-            }
-
-            // Phase 2: crisp solid mark + idle shine sweep
-            if (fillReveal.value > 0f) {
-                val combined = Path().apply {
-                    fillType = PathFillType.EvenOdd
-                    addPath(outerPath)
-                    addPath(barsHolePath)
-                    addPath(triHolePath)
-                }
-                clipPath(combined) {
-                    drawRect(color = color.copy(alpha = fillReveal.value))
-                    if (fillReveal.value >= 1f) {
-                        val bandWidth = w * 0.5f
-                        val startX = -bandWidth + shimmer * (w + bandWidth * 2)
-                        drawRect(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(alpha = 0.35f),
-                                    Color.Transparent
-                                ),
-                                start = Offset(startX, 0f),
-                                end = Offset(startX + bandWidth, h)
-                            )
-                        )
-                    }
+                    drawCircle(color = color, radius = glowRadiusPx * 0.55f, center = p)
                 }
             }
         }
