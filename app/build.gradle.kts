@@ -24,17 +24,12 @@ android {
         version = release(36)
     }
 
-    androidResources {
-        ignoreAssetsPatterns.add("native-v9a")
-        ignoreAssetsPatterns.add("py.arm64-v8a")
-    }
-
     defaultConfig {
         applicationId = "com.devson.openplayer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 116
-        versionName = "1.1.6"
+        versionCode = 100
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -58,7 +53,7 @@ android {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            resValue("string", "app_name", "O Player Beta")
+            resValue("string", "app_name", "OPlayer Beta")
         }
 
         release {
@@ -68,7 +63,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            resValue("string", "app_name", "Open Player")
+            resValue("string", "app_name", "OpenPlayer")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }

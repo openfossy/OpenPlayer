@@ -232,10 +232,10 @@ fun CustomHomeSettingsScreen(
                             Spacer(Modifier.width(16.dp))
                             Text(
                                 text = when (screen) {
-                                    DefaultScreen.HOME -> "Home Screen (Recommended)"
+                                    DefaultScreen.HOME -> "Home Screen (Dashboard)"
                                     DefaultScreen.FOLDERS -> "Folders Screen"
                                     DefaultScreen.HISTORY -> "Watch History Screen"
-                                    DefaultScreen.VIDEO_LIST -> "All Videos Screen"
+                                    DefaultScreen.VIDEO_LIST -> "All Videos Screen (Default)"
                                 },
                                 style = MaterialTheme.typography.bodyLarge
                             )
