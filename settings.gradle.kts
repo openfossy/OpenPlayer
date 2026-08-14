@@ -26,5 +26,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "nvplayer"
+rootProject.name = "openplayer"
 include(":app")

@@ -1,0 +1,234 @@
+package com.devson.openplayer.ui.screens.videolist.components.selection
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.devson.openplayer.domain.model.Video
+import com.devson.openplayer.util.TagStatusDialog
+
+@Composable
+fun VideoSelectionBottomBar(
+    selectedVideos: Set<Video>,
+    onMove: () -> Unit,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit,
+    onRename: () -> Unit,
+    onShare: () -> Unit,
+    onMarkStatus: (String) -> Unit
+) {
+    VideoSelectionBottomBar(
+        selectedVideos = selectedVideos,
+        onMove = onMove,
+        onCopy = onCopy,
+        onDelete = onDelete,
+        onRename = onRename,
+        onShare = onShare,
+        onMarkStatus = onMarkStatus,
+        showTagAndShare = true
+    )
+}
+
+@Composable
+fun VideoSelectionBottomBar(
+    selectedVideos: Set<Video>,
+    onMove: () -> Unit,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit,
+    onRename: () -> Unit,
+    onShare: () -> Unit,
+    onMarkStatus: (String) -> Unit,
+    showTagAndShare: Boolean
+) {
+    var showTagDialog by remember { mutableStateOf(false) }
+
+    if (showTagDialog) {
+        TagStatusDialog(
+            onDismiss = { showTagDialog = false },
+            onConfirm = { status ->
+                showTagDialog = false
+                onMarkStatus(status)
+            }
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            ),
+            tonalElevation = 6.dp,
+            shadowElevation = 10.dp,
+            modifier = Modifier.wrapContentWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .animateContentSize(
+                        animationSpec = spring(
+                            dampingRatio = 0.55f,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Move
+                ActionColumn(
+                    icon = Icons.AutoMirrored.Filled.DriveFileMove,
+                    label = "Move",
+                    onClick = onMove
+                )
+                // Copy
+                ActionColumn(
+                    icon = Icons.Filled.ContentCopy,
+                    label = "Copy",
+                    onClick = onCopy
+                )
+                // Delete
+                ActionColumn(
+                    icon = Icons.Filled.Delete,
+                    label = "Delete",
+                    onClick = onDelete
+                )
+                // Rename with rubber animation
+                AnimatedVisibility(
+                    visible = selectedVideos.size == 1,
+                    enter = expandHorizontally(
+                        animationSpec = spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessLow),
+                        expandFrom = Alignment.CenterHorizontally
+                    ) + fadeIn(animationSpec = spring(stiffness = Spring.StiffnessLow)) + scaleIn(
+                        animationSpec = spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessLow),
+                        initialScale = 0.7f
+                    ),
+                    exit = shrinkHorizontally(
+                        animationSpec = spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessLow),
+                        shrinkTowards = Alignment.CenterHorizontally
+                    ) + fadeOut(animationSpec = spring(stiffness = Spring.StiffnessLow)) + scaleOut(
+                        animationSpec = spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessLow),
+                        targetScale = 0.7f
+                    )
+                ) {
+                    ActionColumn(
+                        icon = Icons.Filled.DriveFileRenameOutline,
+                        label = "Rename",
+                        onClick = onRename
+                    )
+                }
+                // Share
+                if (showTagAndShare) {
+                    ActionColumn(
+                        icon = Icons.Filled.Share,
+                        label = "Share",
+                        onClick = onShare
+                    )
+                }
+                // Tagging
+                if (showTagAndShare) {
+                    ActionColumn(
+                        icon = Icons.AutoMirrored.Filled.Label,
+                        label = "Tag",
+                        onClick = { showTagDialog = true }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionColumn(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    ActionColumn(
+        icon = icon,
+        label = label,
+        onClick = onClick,
+        modifier = Modifier
+    )
+}
+
+@Composable
+private fun ActionColumn(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clip(CircleShape)
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1
+        )
+    }
+}

@@ -19,7 +19,7 @@ val splitApks = !project.hasProperty("noSplits") && !gradle.startParameter.taskN
 }
 
 android {
-    namespace = "com.devson.nvplayeroff"
+    namespace = "com.devson.openplayer"
     compileSdk {
         version = release(36)
     }
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.devson.nvplayeroff"
+        applicationId = "com.devson.openplayer"
         minSdk = 26
         targetSdk = 36
         versionCode = 116
@@ -58,7 +58,7 @@ android {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            resValue("string", "app_name", "NPlay Offline")
+            resValue("string", "app_name", "O Player Beta")
         }
 
         release {
@@ -68,7 +68,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            resValue("string", "app_name", "Nosved Player Offline")
+            resValue("string", "app_name", "Open Player")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -90,7 +90,7 @@ android {
         variant.outputs.all {
             val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val abiName = outputImpl.filters.find { it.filterType == "ABI" }?.identifier ?: "universal"
-            outputFileName = "NosvedPlayerOffline-v${variant.versionName}-${abiName}.apk"
+            outputFileName = "OpenPlayer-v${variant.versionName}-${abiName}.apk"
         }
     }
     compileOptions {
@@ -121,7 +121,7 @@ android {
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
         jniLibs {
-            useLegacyPackaging = false
+            useLegacyPackaging = true
             pickFirsts += "**/libc++_shared.so"
         }
     }

@@ -1,4 +1,4 @@
-package com.devson.nvplayer
+package com.devson.openplayer
 
 import org.junit.Test
 import java.io.File

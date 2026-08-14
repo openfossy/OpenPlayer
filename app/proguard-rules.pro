@@ -1,5 +1,5 @@
 # =============================================================================
-# Nosved Player ProGuard / R8 Rules
+# Open Player ProGuard / R8 Rules
 # =============================================================================
 # IMPORTANT: Release builds use isMinifyEnabled=true with proguard-android-optimize.txt.
 # These rules guard all JNI bridges, native-callback interfaces, and coroutine
@@ -40,20 +40,20 @@
 
 
 # -----------------------------------------------------------------------------
-# 2.  Nosved PLAYER PLAYER PACKAGE  (JNI + SurfaceHolder callbacks)
+# 2.  Open Player PLAYER PACKAGE  (JNI + SurfaceHolder callbacks)
 # -----------------------------------------------------------------------------
 # MPVPlayerEngine implements MPVLib.EventObserver - its JNI callback methods
 # must not be renamed or stripped.
 # MPVSurfaceView implements SurfaceHolder.Callback - surfaceCreated/Changed/
 # Destroyed are called by the Android framework by name.
 # -----------------------------------------------------------------------------
--keep class com.devson.nvplayer.player.engine.MPVPlayerEngine { *; }
--keep class com.devson.nvplayer.player.engine.MPVSurfaceView { *; }
--keep class com.devson.nvplayer.player.** { *; }
+-keep class com.devson.openplayer.player.engine.MPVPlayerEngine { *; }
+-keep class com.devson.openplayer.player.engine.MPVSurfaceView { *; }
+-keep class com.devson.openplayer.player.** { *; }
 
 # Keep all data/enum classes used across JNI boundaries or serialised via
 # reflection (TrackInfo, ChapterInfo, PlayerState, DecoderMode, AspectMode…)
--keepclassmembers class com.devson.nvplayer.player.** {
+-keepclassmembers class com.devson.openplayer.player.** {
     public protected *;
 }
 
@@ -104,7 +104,10 @@
 
 
 # -----------------------------------------------------------------------------
-# 8.  REMOVE AGGRESSIVE OBFUSCATION FLAGS
+# 8.  REMOVE AGGRESSIVE OBFUSCATION FLAGS & R8 METADATA PARSING SUPPRESSION
+# -----------------------------------------------------------------------------
+-dontwarn kotlin.Metadata
+-dontwarn is.xyz.mpv.**
 # -----------------------------------------------------------------------------
 # The previous -repackageclasses '' + -allowaccessmodification combination was
 # moving all classes into the default package, which broke JNI method lookup
