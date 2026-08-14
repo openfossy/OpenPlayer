@@ -1,2 +1,1 @@
-# VideoIQ
-VideoIQ is Video Player 
+OpenPlayer is Video Player 
