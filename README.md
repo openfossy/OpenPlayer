@@ -1,1 +1,0 @@
-OpenPlayer is Video Player 
