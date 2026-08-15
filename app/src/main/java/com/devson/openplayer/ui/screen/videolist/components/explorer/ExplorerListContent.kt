@@ -26,6 +26,8 @@ import com.devson.openplayer.domain.model.Video
 import com.devson.openplayer.domain.model.VideoFolder
 import com.devson.openplayer.domain.model.ViewSettings
 import com.devson.openplayer.domain.model.WatchHistory
+import com.devson.openplayer.ui.common.components.fastscroll.FastScroller
+import com.devson.openplayer.ui.common.components.fastscroll.FastScrollSectionHelper
 import com.devson.openplayer.ui.screen.videolist.components.video.VideoGridItem
 import com.devson.openplayer.ui.screen.videolist.components.video.VideoListItem
 import com.devson.openplayer.ui.screen.videolist.components.folder.FolderGridItem
@@ -66,137 +68,153 @@ fun ExplorerListContent(
     val currentOnVideoClick by rememberUpdatedState(onVideoClick)
     val currentOnVideoLongClick by rememberUpdatedState(onVideoLongClick)
 
-    if (settings.layoutMode == LayoutMode.GRID) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(settings.gridColumns),
-            state = gridState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 8.dp,
-                end = 8.dp,
-                top = contentPadding.calculateTopPadding() + 8.dp,
-                bottom = contentPadding.calculateBottomPadding() + 8.dp
-            ),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(
-                items = items,
-                key = { item ->
-                    when (item) {
-                        is ExplorerItem.FolderItem -> "folder_${item.folder.id}"
-                        is ExplorerItem.VideoItem -> "video_${item.video.uri}"
-                    }
-                },
-                contentType = { item ->
-                    when (item) {
-                        is ExplorerItem.FolderItem -> "folder_item"
-                        is ExplorerItem.VideoItem -> "video_item"
-                    }
-                }
-            ) { item ->
-                when (item) {
-                    is ExplorerItem.FolderItem -> {
-                        val folder = item.folder
-                        val folderVideos = remember(folder, folderVideosMap) { folderVideosMap[folder] ?: emptyList() }
-                        val onClick = remember(folder) { { currentOnFolderClick(folder) } }
-                        val onLongClick = remember(folder) {
-                            {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                currentOnFolderLongClick(folder)
-                            }
+    FastScroller(
+        itemCount = items.size,
+        listState = if (settings.layoutMode == LayoutMode.LIST) listState else null,
+        gridState = if (settings.layoutMode == LayoutMode.GRID) gridState else null,
+        contentPadding = contentPadding,
+        sectionLabelProvider = { index ->
+            val item = items.getOrNull(index)
+            val folderVideos = if (item is ExplorerItem.FolderItem) folderVideosMap[item.folder] else null
+            FastScrollSectionHelper.getExplorerSectionLabel(
+                item = item,
+                folderVideos = folderVideos,
+                sortField = settings.sortField
+            )
+        }
+    ) {
+        if (settings.layoutMode == LayoutMode.GRID) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(settings.gridColumns),
+                state = gridState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 8.dp,
+                    end = 8.dp,
+                    top = contentPadding.calculateTopPadding() + 8.dp,
+                    bottom = contentPadding.calculateBottomPadding() + 8.dp
+                ),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    items = items,
+                    key = { item ->
+                        when (item) {
+                            is ExplorerItem.FolderItem -> "folder_${item.folder.id}"
+                            is ExplorerItem.VideoItem -> "video_${item.video.uri}"
                         }
-                        FolderGridItem(
-                            folder = folder,
-                            videos = folderVideos,
-                            settings = settings,
-                            isSelected = folder in selectedFolders,
-                            onClick = onClick,
-                            onLongClick = onLongClick
-                        )
-                    }
-                    is ExplorerItem.VideoItem -> {
-                        val video = item.video
-                        val onClick = remember(video) { { _: Video -> currentOnVideoClick(video) } }
-                        val onLongClick = remember(video) {
-                            { _: Video ->
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                currentOnVideoLongClick(video)
-                            }
+                    },
+                    contentType = { item ->
+                        when (item) {
+                            is ExplorerItem.FolderItem -> "folder_item"
+                            is ExplorerItem.VideoItem -> "video_item"
                         }
-                        VideoGridItem(
-                            video = video,
-                            settings = settings,
-                            isSelected = video in selectedVideos,
-                            lastPositionMs = historyMap[video.uri]?.lastPositionMs ?: 0L,
-                            onClick = onClick,
-                            onLongClick = onLongClick
-                        )
+                    }
+                ) { item ->
+                    when (item) {
+                        is ExplorerItem.FolderItem -> {
+                            val folder = item.folder
+                            val folderVideos = remember(folder, folderVideosMap) { folderVideosMap[folder] ?: emptyList() }
+                            val onClick = remember(folder) { { currentOnFolderClick(folder) } }
+                            val onLongClick = remember(folder) {
+                                {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    currentOnFolderLongClick(folder)
+                                }
+                            }
+                            FolderGridItem(
+                                folder = folder,
+                                videos = folderVideos,
+                                settings = settings,
+                                isSelected = folder in selectedFolders,
+                                onClick = onClick,
+                                onLongClick = onLongClick
+                            )
+                        }
+                        is ExplorerItem.VideoItem -> {
+                            val video = item.video
+                            val onClick = remember(video) { { _: Video -> currentOnVideoClick(video) } }
+                            val onLongClick = remember(video) {
+                                { _: Video ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    currentOnVideoLongClick(video)
+                                }
+                            }
+                            VideoGridItem(
+                                video = video,
+                                settings = settings,
+                                isSelected = video in selectedVideos,
+                                lastPositionMs = historyMap[video.uri]?.lastPositionMs ?: 0L,
+                                onClick = onClick,
+                                onLongClick = onLongClick
+                            )
+                        }
                     }
                 }
             }
-        }
-    } else {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = contentPadding.calculateTopPadding(),
-                bottom = contentPadding.calculateBottomPadding() + 16.dp
-            )
-        ) {
-            items(
-                items = items,
-                key = { item ->
-                    when (item) {
-                        is ExplorerItem.FolderItem -> "folder_${item.folder.id}"
-                        is ExplorerItem.VideoItem -> "video_${item.video.uri}"
-                    }
-                },
-                contentType = { item ->
-                    when (item) {
-                        is ExplorerItem.FolderItem -> "folder_item"
-                        is ExplorerItem.VideoItem -> "video_item"
-                    }
-                }
-            ) { item ->
-                when (item) {
-                    is ExplorerItem.FolderItem -> {
-                        val folder = item.folder
-                        val folderVideos = remember(folder, folderVideosMap) { folderVideosMap[folder] ?: emptyList() }
-                        val onClick = remember(folder) { { currentOnFolderClick(folder) } }
-                        val onLongClick = remember(folder) {
-                            {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                currentOnFolderLongClick(folder)
-                            }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = contentPadding.calculateTopPadding(),
+                    bottom = contentPadding.calculateBottomPadding() + 16.dp
+                )
+            ) {
+                items(
+                    items = items,
+                    key = { item ->
+                        when (item) {
+                            is ExplorerItem.FolderItem -> "folder_${item.folder.id}"
+                            is ExplorerItem.VideoItem -> "video_${item.video.uri}"
                         }
-                        FolderListItem(
-                            folder = folder,
-                            videos = folderVideos,
-                            settings = settings,
-                            isSelected = folder in selectedFolders,
-                            onClick = onClick,
-                            onLongClick = onLongClick
-                        )
-                    }
-                    is ExplorerItem.VideoItem -> {
-                        val video = item.video
-                        val onClick = remember(video) { { _: Video -> currentOnVideoClick(video) } }
-                        val onLongClick = remember(video) {
-                            { _: Video ->
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                currentOnVideoLongClick(video)
-                            }
+                    },
+                    contentType = { item ->
+                        when (item) {
+                            is ExplorerItem.FolderItem -> "folder_item"
+                            is ExplorerItem.VideoItem -> "video_item"
                         }
-                        VideoListItem(
-                            video = video,
-                            settings = settings,
-                            isSelected = video in selectedVideos,
-                            lastPositionMs = historyMap[video.uri]?.lastPositionMs ?: 0L,
-                            onClick = onClick,
-                            onLongClick = onLongClick
-                        )
+                    }
+                ) { item ->
+                    when (item) {
+                        is ExplorerItem.FolderItem -> {
+                            val folder = item.folder
+                            val folderVideos = remember(folder, folderVideosMap) { folderVideosMap[folder] ?: emptyList() }
+                            val onClick = remember(folder) { { currentOnFolderClick(folder) } }
+                            val onLongClick = remember(folder) {
+                                {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    currentOnFolderLongClick(folder)
+                                }
+                            }
+                            FolderListItem(
+                                folder = folder,
+                                videos = folderVideos,
+                                settings = settings,
+                                isSelected = folder in selectedFolders,
+                                onClick = onClick,
+                                onLongClick = onLongClick
+                            )
+                        }
+                        is ExplorerItem.VideoItem -> {
+                            val video = item.video
+                            val onClick = remember(video) { { _: Video -> currentOnVideoClick(video) } }
+                            val onLongClick = remember(video) {
+                                { _: Video ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    currentOnVideoLongClick(video)
+                                }
+                            }
+                            VideoListItem(
+                                video = video,
+                                settings = settings,
+                                isSelected = video in selectedVideos,
+                                lastPositionMs = historyMap[video.uri]?.lastPositionMs ?: 0L,
+                                onClick = onClick,
+                                onLongClick = onLongClick
+                            )
+                        }
                     }
                 }
             }
