@@ -14,7 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavController
 import androidx.lifecycle.Lifecycle
-import com.devson.openplayer.ui.screen.HomeScreen
+import com.devson.openplayer.ui.screen.ProfileScreen
 import com.devson.openplayer.ui.screen.HistoryScreen
 import com.devson.openplayer.ui.screen.PlayerScreen
 import com.devson.openplayer.ui.screen.SearchResultsScreen
@@ -22,7 +22,7 @@ import com.devson.openplayer.ui.screen.SettingsScreen
 import com.devson.openplayer.ui.screen.settings.AppearanceSettingsScreen
 import com.devson.openplayer.ui.screen.settings.RecycleBinScreen
 import com.devson.openplayer.ui.screen.settings.GestureSettingsScreen
-import com.devson.openplayer.ui.screen.settings.CustomHomeSettingsScreen
+import com.devson.openplayer.ui.screen.settings.CustomProfileSettingsScreen
 import com.devson.openplayer.ui.screen.settings.PlayerInterfaceSettingsScreen
 import com.devson.openplayer.ui.screen.settings.AboutScreen
 import com.devson.openplayer.ui.screen.settings.CreditsScreen
@@ -80,13 +80,7 @@ fun AppNavigation(
         navController.safePopBackStack()
     }
 
-    val startDestination = remember {
-        if (settingsViewModel.getInitialDefaultScreen() == DefaultScreen.VIDEO_LIST) {
-            "video_list"
-        } else {
-            "home"
-        }
-    }
+    val startDestination = "video_list"
 
     LaunchedEffect(initialUri) {
         if (initialUri != null) {
@@ -148,22 +142,22 @@ fun AppNavigation(
             ) + fadeOut(animationSpec = tween(300))
         }
     ) {
-        composable("home") {
-            HomeScreen(
+        composable("profile") {
+            ProfileScreen(
                 viewModel = videoListViewModel,
                 fileOpsViewModel = fileOpsViewModel,
                 homeViewModel = homeViewModel,
+                onBack = safePopBackStack,
+                onCustomizeClick = {
+                    navController.navigate("custom_profile") {
+                        launchSingleTop = true
+                    }
+                },
                 onFolderClick = { folderId ->
                     val folder = videoListViewModel.videosByFolder.value.keys.find { it.id == folderId }
                     videoListViewModel.selectFolder(folder)
                     videoListViewModel.updateViewMode(ViewMode.ALL_FOLDERS)
                     navController.navigate("video_list") {
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onSettingsClick = {
-                    navController.navigate("settings") {
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -321,7 +315,7 @@ fun AppNavigation(
                 onNavigateToPrivacyPolicy = { navController.navigate("privacy_policy") { launchSingleTop = true } },
                 onNavigateToAppearance = { navController.navigate("appearance") { launchSingleTop = true } },
                 onNavigateToGestures = { navController.navigate("gestures") { launchSingleTop = true } },
-                onNavigateToCustomHome = { navController.navigate("custom_home") { launchSingleTop = true } },
+                onNavigateToProfile = { navController.navigate("profile") { launchSingleTop = true } },
                 onNavigateToPlayerInterface = { navController.navigate("player_interface") { launchSingleTop = true } },
                 onNavigateToScanFolders = { navController.navigate("folder_settings") { launchSingleTop = true } },
                 onNavigateToTool = { navController.navigate("tools") { launchSingleTop = true } },
@@ -414,8 +408,8 @@ fun AppNavigation(
             )
         }
 
-        composable("custom_home") {
-            CustomHomeSettingsScreen(
+        composable("custom_profile") {
+            CustomProfileSettingsScreen(
                 onNavigateBack = safePopBackStack,
                 settingsViewModel = settingsViewModel
             )

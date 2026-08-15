@@ -42,7 +42,7 @@ fun SettingsScreen(
     onNavigateToTool: () -> Unit = {},
     onNavigateToRecycleBin: () -> Unit = {},
     onNavigateToPlayerInterface: () -> Unit = {},
-    onNavigateToCustomHome: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {},
     onNavigateToGestures: () -> Unit = {},
     onNavigateToMpvConfig: () -> Unit = {},
     settingsViewModel: SettingsViewModel = viewModel()
@@ -111,6 +111,7 @@ fun SettingsScreen(
                 // App identity card
                 AppIdentityCard(
                     versionName = versionName,
+                    onClick = onNavigateToProfile,
                     onVersionTap = {
                         if (!isDeveloperMode) {
                             val now = System.currentTimeMillis()
@@ -172,12 +173,6 @@ fun SettingsScreen(
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 72.dp),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                        SettingsItemRow(
-                            icon = Icons.Default.Home,
-                            title = "Custom Home",
-                            subtitle = "Customize Home Screen Layout",
-                            onClick = onNavigateToCustomHome
                         )
                         SettingsItemRow(
                             icon = Icons.Default.Settings,
@@ -353,6 +348,7 @@ fun SettingsItemRow(
 @Composable
 private fun AppIdentityCard(
     versionName: String,
+    onClick: () -> Unit = {},
     onVersionTap: () -> Unit = {}
 ) {
     Card(
@@ -366,7 +362,7 @@ private fun AppIdentityCard(
         Row(
             modifier            = Modifier
                 .fillMaxWidth()
-                .clickable { onVersionTap() }
+                .clickable { onClick() }
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalAlignment   = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -408,18 +404,30 @@ private fun AppIdentityCard(
                 )
             }
 
-            // Subtle badge
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = if (BuildConfig.DEBUG) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.padding(end = 2.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text      = if (BuildConfig.DEBUG) "DEBUG" else stringResource(R.string.settings_stable),
-                    style     = MaterialTheme.typography.labelSmall,
-                    color     = if (BuildConfig.DEBUG) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Bold,
-                    modifier  = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                // Subtle badge
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (BuildConfig.DEBUG) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.clickable { onVersionTap() }
+                ) {
+                    Text(
+                        text      = if (BuildConfig.DEBUG) "DEBUG" else stringResource(R.string.settings_stable),
+                        style     = MaterialTheme.typography.labelSmall,
+                        color     = if (BuildConfig.DEBUG) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold,
+                        modifier  = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "View Profile",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

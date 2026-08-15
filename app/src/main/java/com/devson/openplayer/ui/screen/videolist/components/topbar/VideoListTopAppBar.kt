@@ -62,7 +62,6 @@ fun VideoListTopAppBar(
     selectedCount: Int,
     totalCount: Int,
     showBackButton: Boolean,
-    showHomeBackButton: Boolean = true,
     onClearSelection: () -> Unit,
     onShowInfo: () -> Unit,
     onSelectAll: () -> Unit,
@@ -217,10 +216,6 @@ fun VideoListTopAppBar(
                     if (showBackButton) {
                         IconButton(onClick = onBackToFolders) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    } else if (showHomeBackButton) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
                         }
                     }
                 },

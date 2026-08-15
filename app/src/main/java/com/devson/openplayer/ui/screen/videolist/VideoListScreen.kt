@@ -302,7 +302,6 @@ fun VideoListScreen(
                     ViewMode.FOLDERS -> explorerItems.size
                 },
                 showBackButton = selectedFolder != null || (viewSettings.viewMode == ViewMode.FOLDERS && currentExplorerPath != baseRoot),
-                showHomeBackButton = viewSettings.defaultScreen != DefaultScreen.VIDEO_LIST,
                 onClearSelection = { 
                     selectedFolders = emptySet()
                     selectedVideos = emptySet()

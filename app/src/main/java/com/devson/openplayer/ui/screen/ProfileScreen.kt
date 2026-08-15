@@ -1,20 +1,25 @@
 package com.devson.openplayer.ui.screen
 
 import android.net.Uri
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material3.*
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
@@ -22,51 +27,45 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.devson.openplayer.domain.model.HomeSection
 import com.devson.openplayer.domain.model.Video
 import com.devson.openplayer.domain.model.VideoFolder
+import com.devson.openplayer.ui.common.components.AnimatedNosvedLogo
 import com.devson.openplayer.ui.common.components.PreviewFloatingActionButton
+import com.devson.openplayer.ui.screen.videolist.components.video.DurationBadge
 import com.devson.openplayer.ui.screen.videolist.components.video.VideoThumbnail
-import com.devson.openplayer.viewmodel.HomeViewModel
-import com.devson.openplayer.viewmodel.VideoListViewModel
-import com.devson.openplayer.util.formatDuration
 import com.devson.openplayer.util.formatDate
+import com.devson.openplayer.util.formatDuration
 import com.devson.openplayer.util.formatSize
 import com.devson.openplayer.viewmodel.FileOperationsViewModel
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import com.devson.openplayer.ui.screen.videolist.components.video.DurationBadge
+import com.devson.openplayer.viewmodel.HomeViewModel
+import com.devson.openplayer.viewmodel.VideoListViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(
+fun ProfileScreen(
     viewModel: VideoListViewModel,
     fileOpsViewModel: FileOperationsViewModel,
     homeViewModel: HomeViewModel,
+    onBack: () -> Unit,
+    onCustomizeClick: () -> Unit,
     onFolderClick: (String) -> Unit,
-    onSettingsClick: () -> Unit,
     onVideoClick: (Uri, List<Uri>) -> Unit,
     onRecycleBinClick: () -> Unit,
     onSearch: (String) -> Unit,
@@ -77,7 +76,6 @@ fun HomeScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val context = LocalContext.current
 
-    // Trigger initial loading of videos
     LaunchedEffect(Unit) {
         viewModel.loadVideos()
     }
@@ -142,11 +140,8 @@ fun HomeScreen(
         }
     }
 
-    var searchQuery by remember { mutableStateOf("") }
     val storageInfo by homeViewModel.storageInfo.collectAsState()
-
     val scrollState = rememberScrollState()
-    val isFabExpanded = remember { derivedStateOf { !scrollState.isScrollInProgress } }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -154,30 +149,27 @@ fun HomeScreen(
         topBar = {
             LargeTopAppBar(
                 title = {
-                    val greeting = remember {
-                        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-                        when (hour) {
-                            in 0..11 -> "Good morning"
-                            in 12..16 -> "Good afternoon"
-                            else -> "Good evening"
-                        }
-                    }
                     Column {
                         Text(
-                            text = greeting,
+                            text = "Profile",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "Open Player",
+                            text = "Overview & Stats",
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                 },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
                 actions = {
                     IconButton(
-                        onClick = onSettingsClick,
+                        onClick = onCustomizeClick,
                         colors = IconButtonDefaults.iconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                         ),
@@ -190,8 +182,8 @@ fun HomeScreen(
                             )
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Customize Profile",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -199,7 +191,9 @@ fun HomeScreen(
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                    scrolledContainerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
@@ -237,6 +231,16 @@ fun HomeScreen(
                 ),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // Profile Header Card
+            ProfileHeaderCard(
+                totalVideos = allVideosFlat.size,
+                watchedCount = history.size,
+                foldersCount = folders.size,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+            )
+
             // Bento Main Library Card
             QuickActionCardBento(
                 title = "Browse Video Library",
@@ -251,7 +255,7 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp)
             )
 
-            // 2. Latest Videos Carousel
+            // Latest Videos Carousel
             if (viewSettings.showLatestVideos && allVideosFlat.isNotEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -293,7 +297,7 @@ fun HomeScreen(
             // Dynamic Sections Loop (Ordered by viewSettings.homeSectionOrder)
             viewSettings.homeSectionOrder.forEach { section ->
                 when (section) {
-                    com.devson.openplayer.domain.model.HomeSection.SHORTCUTS -> {
+                    HomeSection.SHORTCUTS -> {
                         if (viewSettings.isShortcutsVisible) {
                             Column(
                                 modifier = Modifier.padding(horizontal = 20.dp),
@@ -332,7 +336,7 @@ fun HomeScreen(
                         }
                     }
 
-                    com.devson.openplayer.domain.model.HomeSection.HISTORY -> {
+                    HomeSection.HISTORY -> {
                         if (viewSettings.showHistoryCard) {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
@@ -477,7 +481,6 @@ fun HomeScreen(
                                         }
                                     }
                                 } else {
-                                    // Dedicated Empty State for History
                                     Card(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -486,7 +489,7 @@ fun HomeScreen(
                                         colors = CardDefaults.cardColors(
                                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                                         ),
-                                        border = androidx.compose.foundation.BorderStroke(
+                                        border = BorderStroke(
                                             1.dp,
                                             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                                         )
@@ -533,7 +536,7 @@ fun HomeScreen(
                         }
                     }
 
-                    com.devson.openplayer.domain.model.HomeSection.DETAILS -> {
+                    HomeSection.DETAILS -> {
                         if (viewSettings.isDetailsVisible) {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
@@ -657,6 +660,106 @@ fun HomeScreen(
 }
 
 @Composable
+private fun ProfileHeaderCard(
+    totalVideos: Int,
+    watchedCount: Int,
+    foldersCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.secondary
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedNosvedLogo(
+                        modifier = Modifier.size(34.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        animateOnEntry = true
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Open Player User",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "Personal Media Center",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                ProfileMetric(label = "Videos", value = totalVideos.toString())
+                ProfileMetric(label = "Watched", value = watchedCount.toString())
+                ProfileMetric(label = "Folders", value = foldersCount.toString())
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileMetric(
+    label: String,
+    value: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
 fun StatsCard(
     title: String,
     value: String,
@@ -669,7 +772,7 @@ fun StatsCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
         )
@@ -737,7 +840,7 @@ fun QuickActionCardBento(
         colors = CardDefaults.cardColors(
             containerColor = finalBgColor
         ),
-        border = if (isProminent) null else androidx.compose.foundation.BorderStroke(
+        border = if (isProminent) null else BorderStroke(
             1.dp,
             containerColor.copy(alpha = 0.25f)
         )
@@ -807,7 +910,7 @@ fun QuickActionCardBentoSmall(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
         )
@@ -850,161 +953,6 @@ fun QuickActionCardBentoSmall(
         }
     }
 }
-
-@Composable
-fun ContinueWatchingCard(
-    video: Video,
-    lastPositionMs: Long,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val progress = if (video.duration > 0) lastPositionMs.toFloat() / video.duration else 0f
-    val formattedProgress = "${formatDuration(lastPositionMs)} / ${formatDuration(video.duration)}"
-
-    Card(
-        modifier = modifier
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Black
-        )
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // 1. Thumbnail filling the entire card
-            VideoThumbnail(
-                uri = video.thumbnailUri ?: video.uri,
-                modifier = Modifier.fillMaxSize(),
-                showPlayIcon = false
-            )
-
-            // 2. Play overlay icon in the center
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Center)
-                    .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // 3. Info text overlaid at the bottom on a vertical gradient backplate
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.7f),
-                                Color.Black.copy(alpha = 0.95f)
-                            )
-                        )
-                    )
-                    .padding(horizontal = 12.dp, vertical = 12.dp)
-                    .padding(bottom = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = video.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = video.folderName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = formattedProgress,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // 4. Thin progress bar at the very bottom
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .align(Alignment.BottomCenter),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = Color.White.copy(alpha = 0.25f)
-            )
-        }
-    }
-}
-
-@Composable
-fun FolderCard(
-    folder: VideoFolder,
-    videoCount: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Folder,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = folder.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "$videoCount videos",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-            )
-        }
-    }
-}
-
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
