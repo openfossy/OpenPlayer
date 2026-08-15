@@ -24,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -48,9 +49,10 @@ fun RecycleBinScreen(
     viewModel: RecycleBinViewModel = viewModel(),
     fileOpsViewModel: FileOperationsViewModel = viewModel()
 ) {
-    val context = LocalContext.current
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val trashedVideos by viewModel.trashedVideos.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val context = LocalContext.current
     
     var selectedVideos by remember { mutableStateOf(emptySet<Video>()) }
     val isSelectionActive = selectedVideos.isNotEmpty()
@@ -99,13 +101,20 @@ fun RecycleBinScreen(
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
                 title = { 
                     if (isSelectionActive) {
-                        Text(stringResource(R.string.selection_items_count, selectedVideos.size, trashedVideos.size))
+                        Text(
+                            stringResource(R.string.selection_items_count, selectedVideos.size, trashedVideos.size),
+                            fontWeight = FontWeight.SemiBold
+                        )
                     } else {
-                        Text(stringResource(R.string.recycle_bin_title))
+                        Text(
+                            stringResource(R.string.recycle_bin_title),
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 },
                 navigationIcon = {
@@ -133,7 +142,14 @@ fun RecycleBinScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                    actionIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
         containerColor = MaterialTheme.colorScheme.background,

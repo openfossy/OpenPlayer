@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,6 +54,7 @@ fun AppearanceSettingsScreen(
     onNavigateBack: () -> Unit,
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val isDark        by settingsViewModel.isDarkTheme.collectAsState()
     val dynamicColor  by settingsViewModel.dynamicColor.collectAsState()
     val selectedPalette by settingsViewModel.selectedPalette.collectAsState()
@@ -114,12 +116,12 @@ fun AppearanceSettingsScreen(
 
     // Main scaffold
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
                 title = {
                     Text(
                         stringResource(R.string.settings_display),
-                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 },
@@ -128,8 +130,10 @@ fun AppearanceSettingsScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )

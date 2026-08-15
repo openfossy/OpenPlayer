@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -40,18 +41,19 @@ fun CustomHomeSettingsScreen(
     onNavigateBack: () -> Unit,
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
-    val context = LocalContext.current
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val viewSettings by settingsViewModel.viewSettings.collectAsState()
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
     var showDefaultScreenDialog by remember { mutableStateOf(false) }
     var showRestartDialog by remember { mutableStateOf(false) }
 
-    val restartApp: () -> Unit = {
-        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)!!
-            .apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            }
+    // Helper to restart app gracefully
+    fun restartApp() {
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        }
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent,
             PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -61,12 +63,12 @@ fun CustomHomeSettingsScreen(
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
                 title = {
                     Text(
                         "Custom Home",
-                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 },
@@ -78,8 +80,10 @@ fun CustomHomeSettingsScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
@@ -259,7 +263,7 @@ fun CustomHomeSettingsScreen(
                 Text("The default launch screen has been changed. Restart the app now to apply this setting?")
             },
             confirmButton = {
-                Button(onClick = restartApp) {
+                Button(onClick = { restartApp() }) {
                     Text("Restart Now")
                 }
             },

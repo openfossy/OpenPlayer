@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
@@ -73,6 +74,7 @@ fun HomeScreen(
     onFeedClick: () -> Unit,
     onSeeMoreHistoryClick: () -> Unit
 ) {
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val context = LocalContext.current
 
     // Trigger initial loading of videos
@@ -147,7 +149,60 @@ fun HomeScreen(
     val isFabExpanded = remember { derivedStateOf { !scrollState.isScrollInProgress } }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            LargeTopAppBar(
+                title = {
+                    val greeting = remember {
+                        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                        when (hour) {
+                            in 0..11 -> "Good morning"
+                            in 12..16 -> "Good afternoon"
+                            else -> "Good evening"
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = greeting,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Open Player",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = onSettingsClick,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        ),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        },
         floatingActionButton = {
             if (viewSettings.showQuickFab) {
                 val lastPlayedVideo = remember(history, allVideosFlat) {
@@ -182,59 +237,6 @@ fun HomeScreen(
                 ),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 1. Personalized Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    val greeting = remember {
-                        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-                        when (hour) {
-                            in 0..11 -> "Good morning"
-                            in 12..16 -> "Good afternoon"
-                            else -> "Good evening"
-                        }
-                    }
-                    Text(
-                        text = greeting,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Open Player",
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onSettingsClick,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                        ),
-                        modifier = Modifier.border(
-                            1.dp,
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                            CircleShape
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
             // Bento Main Library Card
             QuickActionCardBento(
                 title = "Browse Video Library",
