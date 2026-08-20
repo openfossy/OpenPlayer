@@ -1,0 +1,168 @@
+package com.openfossy.openplayer.ui.screen.videolist.components.folder
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.openfossy.openplayer.R
+import com.openfossy.openplayer.domain.model.LayoutMode
+import com.openfossy.openplayer.domain.model.Video
+import com.openfossy.openplayer.domain.model.VideoFolder
+import com.openfossy.openplayer.domain.model.ViewSettings
+import com.openfossy.openplayer.domain.model.WatchHistory
+import com.openfossy.openplayer.ui.common.components.CustomEmptyStateView
+import com.openfossy.openplayer.ui.common.components.fastscroll.FastScroller
+import com.openfossy.openplayer.ui.common.components.fastscroll.FastScrollSectionHelper
+import com.openfossy.openplayer.ui.screens.videolist.utils.applyFolderSort
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun FolderListContent(
+    folders: Map<VideoFolder, List<Video>>,
+    settings: ViewSettings,
+    selectedFolders: Set<VideoFolder>,
+    historyMap: Map<String, WatchHistory> = emptyMap(),
+    mostRecentPlayedUri: String? = null,
+    onFolderClick: (VideoFolder) -> Unit,
+    onFolderLongClick: (VideoFolder) -> Unit,
+    listState: LazyListState = rememberLazyListState(),
+    gridState: LazyGridState = rememberLazyGridState(),
+    contentPadding: PaddingValues = PaddingValues(0.dp)
+) {
+    val haptic = LocalHapticFeedback.current
+    val sortedFolders = remember(folders, settings.sortField, settings.sortDirection) {
+        folders.keys.toList().applyFolderSort(folders, settings.sortField, settings.sortDirection)
+    }
+    val currentOnFolderClick by rememberUpdatedState(onFolderClick)
+    val currentOnFolderLongClick by rememberUpdatedState(onFolderLongClick)
+
+    if (sortedFolders.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CustomEmptyStateView(
+                icon    = Icons.Filled.VideoLibrary,
+                heading = stringResource(R.string.folder_no_folders_found),
+                subtext = stringResource(R.string.folder_no_folders_desc),
+                ctaLabel = stringResource(R.string.folder_scan_cta)
+            )
+        }
+        return
+    }
+
+    FastScroller(
+        itemCount = sortedFolders.size,
+        listState = if (settings.layoutMode == LayoutMode.LIST) listState else null,
+        gridState = if (settings.layoutMode == LayoutMode.GRID) gridState else null,
+        contentPadding = contentPadding,
+        sectionLabelProvider = { index ->
+            val folder = sortedFolders.getOrNull(index)
+            FastScrollSectionHelper.getFolderSectionLabel(
+                folder = folder,
+                videos = if (folder != null) folders[folder] else null,
+                sortField = settings.sortField
+            )
+        }
+    ) {
+        if (settings.layoutMode == LayoutMode.GRID) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(settings.gridColumns),
+                state = gridState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 8.dp,
+                    top = contentPadding.calculateTopPadding() + 8.dp,
+                    end = 8.dp,
+                    bottom = contentPadding.calculateBottomPadding() + 40.dp
+                ),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    items = sortedFolders,
+                    key = { folder -> folder.id },
+                    contentType = { "folder_item" }
+                ) { folder ->
+                    val folderVideos = folders[folder] ?: emptyList()
+                    val isRecentlyPlayed = remember(folderVideos, mostRecentPlayedUri) {
+                        mostRecentPlayedUri != null && folderVideos.any { it.uri == mostRecentPlayedUri }
+                    }
+                    val onClick = remember(folder) { { currentOnFolderClick(folder) } }
+                    val onLongClick = remember(folder) {
+                        {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            currentOnFolderLongClick(folder)
+                        }
+                    }
+                    FolderGridItem(
+                        folder = folder,
+                        videos = folderVideos,
+                        settings = settings,
+                        isSelected = folder in selectedFolders,
+                        isRecentlyPlayed = isRecentlyPlayed,
+                        historyMap = historyMap,
+                        onClick = onClick,
+                        onLongClick = onLongClick
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = contentPadding.calculateTopPadding(),
+                    bottom = contentPadding.calculateBottomPadding() + 32.dp
+                )
+            ) {
+                items(
+                    items = sortedFolders,
+                    key = { folder -> folder.id },
+                    contentType = { "folder_item" }
+                ) { folder ->
+                    val folderVideos = folders[folder] ?: emptyList()
+                    val isRecentlyPlayed = remember(folderVideos, mostRecentPlayedUri) {
+                        mostRecentPlayedUri != null && folderVideos.any { it.uri == mostRecentPlayedUri }
+                    }
+                    val onClick = remember(folder) { { currentOnFolderClick(folder) } }
+                    val onLongClick = remember(folder) {
+                        {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            currentOnFolderLongClick(folder)
+                        }
+                    }
+                    FolderListItem(
+                        folder = folder,
+                        videos = folderVideos,
+                        settings = settings,
+                        isSelected = folder in selectedFolders,
+                        isRecentlyPlayed = isRecentlyPlayed,
+                        historyMap = historyMap,
+                        onClick = onClick,
+                        onLongClick = onLongClick
+                    )
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,216 @@
+package com.openfossy.openplayer.ui.screen.videolist.components.video
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.openfossy.openplayer.domain.model.Video
+import com.openfossy.openplayer.domain.model.ViewSettings
+import com.openfossy.openplayer.ui.screen.videolist.components.common.VideoMetadataChips
+import com.openfossy.openplayer.ui.screen.videolist.components.common.VideoWatchState
+import com.openfossy.openplayer.ui.screen.videolist.components.common.WatchProgressBar
+import com.openfossy.openplayer.ui.screen.videolist.components.common.WatchStateBadge
+import com.openfossy.openplayer.ui.screen.videolist.components.common.getWatchState
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun VideoListItem(
+    video: Video,
+    settings: ViewSettings,
+    isSelected: Boolean = false,
+    isRecentlyPlayed: Boolean = false,
+    lastPositionMs: Long = 0L,
+    onClick: (Video) -> Unit,
+    onLongClick: (Video) -> Unit,
+    onInfoClick: (() -> Unit)? = null
+) {
+    val haptic = LocalHapticFeedback.current
+ 
+    // Smooth background colour transition on select or recently played highlight
+    val bgColor by animateColorAsState(
+        targetValue  = when {
+            isSelected -> MaterialTheme.colorScheme.primaryContainer
+            isRecentlyPlayed -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
+            else -> MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        animationSpec = tween(180),
+        label = "listItemBg"
+    )
+ 
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 5.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .combinedClickable(
+                onClick    = { onClick(video) },
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick(video)
+                }
+            ),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = bgColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation  = if (isSelected) 0.dp else 0.5.dp,
+            pressedElevation  = 0.dp
+        ),
+        border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            //  Thumbnail 
+            val watchState = remember(lastPositionMs, video.duration, video.dateAdded, settings.newVideosDaysThreshold) {
+                getWatchState(
+                    lastPositionMs = lastPositionMs,
+                    duration = video.duration,
+                    dateAdded = video.dateAdded,
+                    daysThreshold = settings.newVideosDaysThreshold
+                )
+            }
+            Card(
+                modifier = Modifier
+                    .size(width = 100.dp, height = 60.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .then(if (settings.selectByThumbnail) Modifier.clickable { onLongClick(video) } else Modifier)
+                    .then(if (watchState is VideoWatchState.Completed) Modifier.alpha(0.6f) else Modifier),
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = when {
+                        isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        watchState is VideoWatchState.InProgress -> MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                        else -> Color.Transparent
+                    }
+                ),
+                elevation = CardDefaults.cardElevation(0.dp)
+            ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(10.dp))
+            ) {
+                if (settings.showThumbnail) {
+                    VideoThumbnail(
+                        uri = video.uri,
+                        modifier = Modifier.fillMaxSize(),
+                        showPlayIcon = !isSelected
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Movie,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+
+                // Watch state badge (top-left): NEW / Unwatched / Running / Ended
+                if (!isSelected) {
+                    WatchStateBadge(watchState, isLarge = false)
+                }
+
+                // Duration badge (shown only when displayLengthOverThumbnail is true)
+                if (settings.showLength && settings.displayLengthOverThumbnail && !isSelected) {
+                    DurationBadge(video.duration, isGrid = false)
+                }
+ 
+                // Watch-progress bar
+                WatchProgressBar(lastPositionMs, video.duration)
+ 
+                // Selection overlay (animated)
+                ThumbnailSelectionOverlay(isSelected, isDense = true)
+            }
+            }
+ 
+            Spacer(modifier = Modifier.width(14.dp))
+ 
+            //  Text section 
+            Column(modifier = Modifier.weight(1f)) {
+                val displayTitle = remember(video.title, settings.showFileExtension) {
+                    if (settings.showFileExtension) video.title
+                    else video.title.substringBeforeLast(".")
+                }
+                Text(
+                    text = displayTitle,
+                    style     = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isRecentlyPlayed) FontWeight.Bold else FontWeight.SemiBold,
+                    maxLines  = 2,
+                    overflow  = TextOverflow.Ellipsis,
+                    color     = when {
+                        isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
+                        isRecentlyPlayed -> MaterialTheme.colorScheme.primary
+                        watchState is VideoWatchState.Completed -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+                )
+ 
+                if (settings.showPath) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = video.path,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        color = when {
+                            isSelected -> MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
+                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+ 
+                Spacer(modifier = Modifier.height(5.dp))
+ 
+                VideoMetadataChips(video, settings, lastPositionMs, isRecentlyPlayed = isRecentlyPlayed)
+            }
+
+            // Info icon – only shown when caller provides onInfoClick
+            if (onInfoClick != null) {
+                IconButton(
+                    onClick = onInfoClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Info,
+                        contentDescription = "Video Info",
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+    }
+}

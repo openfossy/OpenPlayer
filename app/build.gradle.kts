@@ -19,13 +19,13 @@ val splitApks = !project.hasProperty("noSplits") && !gradle.startParameter.taskN
 }
 
 android {
-    namespace = "com.devson.openplayer"
+    namespace = "com.openfossy.openplayer"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.devson.openplayer"
+        applicationId = "com.opnefossy.openplayer"
         minSdk = 26
         targetSdk = 36
         versionCode = 100

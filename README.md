@@ -16,7 +16,7 @@
 
 ---
 
-## 📖 Overview
+## Overview
 
 **Open Player** is a native, modern, and highly-customizable Android video player application. Re-engineered from the ground up around the battle-tested **MPV** media engine (`is.xyz.mpv`), Open Player delivers desktop-grade video decoding, hardware acceleration, zero-lag list rendering, and a fluid Material 3 interface.
 
@@ -24,7 +24,7 @@
 
 ## ✨ Key Features
 
-### 🎬 Advanced Playback Engine (MPV)
+### Advanced Playback Engine (MPV)
 
 - **Flexible Hardware Decoding:** Seamlessly switch between `Auto`, `Hardware (HW/HW+)`, and `Software (SW)` decoding modes on the fly.
 - **Smart Video Enhancement:** Real-time hardware shader adjustments for Brightness, Contrast, Saturation, Gamma, and Hue.
@@ -32,27 +32,27 @@
 - **Rich Subtitle Controls:** Multi-track selection, subtitle synchronization delay tuning, custom styling (fonts, size, color, background, and screen offset).
 - **Built-in `mpv.conf` Editor:** Integrated code editor (powered by Sora Editor) with syntax highlighting and auto-complete for advanced MPV scripting and property customization.
 
-### 🎨 Modern Jetpack Compose UI
+### Modern Jetpack Compose UI
 
 - **Material Design 3 & Dynamic Color:** Native theming tailored to your Android system palette.
 - **AMOLED Dark Mode:** True pitch-black interface optimized for OLED displays and battery preservation.
 - **Customizable Control Layouts:** Modular top and bottom player control panels with a visual layout editor.
 - **Fluid Micro-Animations:** Dynamic progress indicators, smooth transitions, and responsive touch feedback.
 
-### 👆 Intuitive Gesture Controls
+### Intuitive Gesture Controls
 
 - **Precision Seeking:** Horizontal slide gestures with configurable seek sensitivity.
 - **Brightness & Volume Controls:** Vertical edge swipes with tactile HUD feedback.
 - **Multi-Finger Actions:** Configurable 2-finger and 3-finger tap shortcuts (Play/Pause, Custom Speeds, Aspect Ratio).
 - **Double-Tap & Long-Press:** Fast forward/rewind zones and instant 2x/3x speed boost during hold.
 
-### ⚡ Performance & Optimization
+### Performance & Optimization
 
 - **Fast-Load Architecture:** MediaStore native thumbnail pre-rendering backed by Coil 3 and Room database metadata caching.
 - **Zero-Jank Scrolling:** Fully asynchronous I/O and immutable state structures for 60/120fps list navigation.
 - **Optimized Binary Size:** Modular ABI splits (`arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`) delivering a lightweight footprint (~24MB).
 
-### 🌐 Network Streaming & Media Tools
+### Network Streaming & Media Tools
 
 - **Direct Stream URL Playback:** Stream remote videos with live buffer telemetry and network speed monitors.
 - **Playback History & Resume:** Automatic position tracking and instant resume for local and streamed media.

@@ -1,4 +1,4 @@
-package com.devson.openplayer
+package com.openfossy.openplayer
 
 import org.junit.Test
 import java.io.File
