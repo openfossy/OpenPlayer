@@ -537,53 +537,25 @@ fun ProfileScreen(
                     }
 
                     HomeSection.DETAILS -> {
-                        if (viewSettings.isDetailsVisible) {
+                        if (viewSettings.isDetailsVisible && viewSettings.showStorageTracker) {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                // Stats Dashboard Section
-                                Row(
+                                // Storage Analytics Card
+                                Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 20.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    )
                                 ) {
-                                    StatsCard(
-                                        title = "Folders",
-                                        value = folders.size.toString(),
-                                        icon = { Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.primary) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    StatsCard(
-                                        title = "Videos",
-                                        value = allVideosFlat.size.toString(),
-                                        icon = { Icon(Icons.Default.VideoLibrary, null, tint = MaterialTheme.colorScheme.secondary) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    StatsCard(
-                                        title = "Played",
-                                        value = history.size.toString(),
-                                        icon = { Icon(Icons.Default.History, null, tint = MaterialTheme.colorScheme.primary) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-
-                                // Storage Analytics Card
-                                if (viewSettings.showStorageTracker) {
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 20.dp),
-                                        shape = RoundedCornerShape(20.dp),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                                        )
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Column(
-                                            modifier = Modifier.padding(16.dp),
-                                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                                        ) {
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -644,18 +616,17 @@ fun ProfileScreen(
                             }
                         }
                     }
-                }
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
-    }
 
-    selectedVideoForInfo?.let { video ->
-        VideoInfoDialog(
-            video = video,
-            onDismissRequest = { selectedVideoForInfo = null }
-        )
+        selectedVideoForInfo?.let { video ->
+            VideoInfoDialog(
+                video = video,
+                onDismissRequest = { selectedVideoForInfo = null }
+            )
+        }
     }
 }
 
@@ -756,50 +727,6 @@ private fun ProfileMetric(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@Composable
-fun StatsCard(
-    title: String,
-    value: String,
-    icon: @Composable () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-                icon()
-            }
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
     }
 }
 
