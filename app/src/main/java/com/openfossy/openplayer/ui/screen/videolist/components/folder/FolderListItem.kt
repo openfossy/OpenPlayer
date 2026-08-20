@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,14 +84,10 @@ fun FolderMediaPreview(
     videos: List<Video>,
     isSelected: Boolean,
     settings: ViewSettings,
-    modifier: Modifier = Modifier,
-    isRecentlyPlayed: Boolean = false
+    modifier: Modifier = Modifier
 ) {
-    val bgColor = if (isRecentlyPlayed)
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-    else
-        MaterialTheme.colorScheme.secondaryContainer
-
+    val bgColor = MaterialTheme.colorScheme.secondaryContainer
+ 
     Box(
         modifier = modifier
             .clip(FolderShape())
@@ -120,7 +117,7 @@ fun FolderMediaPreview(
             Icon(
                 imageVector  = Icons.Filled.FolderOpen,
                 contentDescription = null,
-                tint         = if (isRecentlyPlayed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
+                tint         = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
                 modifier     = Modifier.size(28.dp)
             )
         }
@@ -141,24 +138,31 @@ fun FolderListItem(
 ) {
     val isHidden = folder.name.startsWith(".")
     val newCount = remember(videos, historyMap, settings.newVideosDaysThreshold) {
-        videos.count { v ->
-            val lastPos = historyMap[v.uri]?.lastPositionMs ?: 0L
-            getWatchState(
-                lastPositionMs = lastPos,
-                duration = v.duration,
-                dateAdded = v.dateAdded,
-                daysThreshold = settings.newVideosDaysThreshold
-            ) is VideoWatchState.New
-        }
+        videos.count { v -> getWatchState(
+            historyMap[v.uri]?.lastPositionMs ?: 0L,
+            v.duration,
+            v.dateAdded,
+            settings.newVideosDaysThreshold
+        ) is VideoWatchState.New }
     }
+    val normalBg = MaterialTheme.colorScheme.surfaceContainerLow
     val bgColor by animateColorAsState(
-        targetValue  = when {
+        targetValue = when {
             isSelected -> MaterialTheme.colorScheme.primaryContainer
-            isRecentlyPlayed -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
-            else -> MaterialTheme.colorScheme.surfaceContainerLow
+            isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.08f).compositeOver(normalBg)
+            else -> normalBg
         },
         animationSpec = tween(180),
         label = "folderListBg"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            isSelected -> MaterialTheme.colorScheme.primary
+            isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
+            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        },
+        animationSpec = tween(180),
+        label = "folderListBorder"
     )
 
     Card(
@@ -172,7 +176,7 @@ fun FolderListItem(
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isSelected) 0.dp else 0.5.dp
         ),
-        border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+        border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, borderColor)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -188,8 +192,7 @@ fun FolderListItem(
                         videos   = videos,
                         isSelected = false,
                         settings = settings,
-                        modifier = Modifier.size(width = 72.dp, height = 54.dp),
-                        isRecentlyPlayed = isRecentlyPlayed
+                        modifier = Modifier.size(width = 72.dp, height = 54.dp)
                     )
                     NewCountBadge(newCount)
                 }
@@ -212,7 +215,7 @@ fun FolderListItem(
                         }
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    FolderMetadataChips(videos, settings, isGrid = false, isRecentlyPlayed = isRecentlyPlayed)
+                    FolderMetadataChips(videos, settings)
                 }
             }
 
@@ -223,17 +226,12 @@ fun FolderListItem(
 }
 
 @Composable
-fun FolderMetadataRow(videos: List<Video>, settings: ViewSettings, isGrid: Boolean = false, isRecentlyPlayed: Boolean = false) {
-    FolderMetadataChips(videos, settings, isGrid, isRecentlyPlayed)
+fun FolderMetadataRow(videos: List<Video>, settings: ViewSettings, isGrid: Boolean = false) {
+    FolderMetadataChips(videos, settings, isGrid)
 }
  
 @Composable
-fun FolderMetadataChips(
-    videos: List<Video>,
-    settings: ViewSettings,
-    isGrid: Boolean = false,
-    isRecentlyPlayed: Boolean = false
-) {
+fun FolderMetadataChips(videos: List<Video>, settings: ViewSettings, isGrid: Boolean = false) {
     val countText = stringResource(R.string.folder_videos_count, videos.size)
     val tokens = remember(videos, settings, countText) {
         buildList {
@@ -256,33 +254,23 @@ fun FolderMetadataChips(
         verticalAlignment     = Alignment.CenterVertically
     ) {
         tokens.take(if (isGrid) 2 else 3).forEach { (text, isPrimary) ->
-            FolderMetaChip(
-                text = text,
-                isPrimary = isPrimary,
-                isRecentlyPlayed = isRecentlyPlayed
-            )
+            FolderMetaChip(text = text, isPrimary = isPrimary)
         }
     }
 }
  
 @Composable
-private fun FolderMetaChip(
-    text: String,
-    isPrimary: Boolean,
-    isRecentlyPlayed: Boolean = false
-) {
-    val bgColor = when {
-        isRecentlyPlayed && isPrimary -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-        isPrimary -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f)
-        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-    }
-
-    val textColor = when {
-        isRecentlyPlayed && isPrimary -> MaterialTheme.colorScheme.primary
-        isPrimary -> MaterialTheme.colorScheme.onSecondaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
+private fun FolderMetaChip(text: String, isPrimary: Boolean) {
+    val bgColor   = if (isPrimary)
+        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f)
+    else
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+ 
+    val textColor = if (isPrimary)
+        MaterialTheme.colorScheme.onSecondaryContainer
+    else
+        MaterialTheme.colorScheme.onSurfaceVariant
+ 
     Box(
         modifier = Modifier
             .background(bgColor, RoundedCornerShape(5.dp))

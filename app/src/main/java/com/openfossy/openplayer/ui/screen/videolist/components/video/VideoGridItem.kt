@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -44,26 +45,31 @@ fun VideoGridItem(
     val haptic  = LocalHapticFeedback.current
     val isDense = settings.gridColumns >= 3
     val watchState = remember(lastPositionMs, video.duration, video.dateAdded, settings.newVideosDaysThreshold) {
-        getWatchState(
-            lastPositionMs = lastPositionMs,
-            duration = video.duration,
-            dateAdded = video.dateAdded,
-            daysThreshold = settings.newVideosDaysThreshold
-        )
+        getWatchState(lastPositionMs, video.duration, video.dateAdded, settings.newVideosDaysThreshold)
     }
     val displayTitle = remember(video.title, settings.showFileExtension) {
         if (settings.showFileExtension) video.title
         else video.title.substringBeforeLast(".")
     }
  
+    val normalBg = MaterialTheme.colorScheme.surfaceContainerLow
     val bgColor by animateColorAsState(
-        targetValue  = when {
+        targetValue = when {
             isSelected -> MaterialTheme.colorScheme.primaryContainer
-            isRecentlyPlayed -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
-            else -> MaterialTheme.colorScheme.surfaceContainerLow
+            isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.08f).compositeOver(normalBg)
+            else -> normalBg
         },
         animationSpec = tween(180),
         label = "gridItemBg"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            isSelected -> MaterialTheme.colorScheme.primary
+            isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
+            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        },
+        animationSpec = tween(180),
+        label = "gridItemBorder"
     )
  
     // Single-column (full-width cinema card) 
@@ -83,7 +89,7 @@ fun VideoGridItem(
             shape     = RoundedCornerShape(18.dp),
             colors    = CardDefaults.cardColors(containerColor = bgColor),
             elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 1.dp),
-            border    = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+            border    = BorderStroke(if (isSelected) 1.5.dp else 1.dp, borderColor)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 // Wide thumbnail
@@ -102,11 +108,10 @@ fun VideoGridItem(
                     } else {
                         Box(
                             Modifier.fillMaxSize().background(
-                                when {
-                                    isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                    watchState is VideoWatchState.InProgress -> MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-                                    else -> MaterialTheme.colorScheme.surfaceVariant
-                                }
+                                if (watchState is VideoWatchState.InProgress)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                                else
+                                    MaterialTheme.colorScheme.surfaceVariant
                             ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -132,7 +137,7 @@ fun VideoGridItem(
                         Text(
                             text = displayTitle,
                             style      = MaterialTheme.typography.titleSmall,
-                            fontWeight = if (isRecentlyPlayed) FontWeight.Bold else FontWeight.SemiBold,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines   = 2,
                             overflow   = TextOverflow.Ellipsis,
                             color      = when {
@@ -143,7 +148,7 @@ fun VideoGridItem(
                             }
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        VideoMetadataChips(video, settings, lastPositionMs, isGrid = false, isRecentlyPlayed = isRecentlyPlayed)
+                        VideoMetadataChips(video, settings, lastPositionMs)
                     }
                 }
             }
@@ -167,7 +172,7 @@ fun VideoGridItem(
         shape     = RoundedCornerShape(14.dp),
         colors    = CardDefaults.cardColors(containerColor = bgColor),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 1.dp),
-        border    = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+        border    = BorderStroke(if (isSelected) 1.5.dp else 1.dp, borderColor)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Thumbnail fills most of the card
@@ -186,11 +191,10 @@ fun VideoGridItem(
                 } else {
                     Box(
                         Modifier.fillMaxSize().background(
-                            when {
-                                isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                watchState is VideoWatchState.InProgress -> MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-                                else -> MaterialTheme.colorScheme.surfaceVariant
-                            }
+                            if (watchState is VideoWatchState.InProgress)
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant
                         ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -222,7 +226,7 @@ fun VideoGridItem(
                     Text(
                         text = displayTitle,
                         style      = MaterialTheme.typography.bodySmall,
-                        fontWeight = if (isRecentlyPlayed) FontWeight.Bold else FontWeight.SemiBold,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines   = 2,
                         overflow   = TextOverflow.Ellipsis,
                         color      = when {
@@ -233,7 +237,7 @@ fun VideoGridItem(
                         }
                     )
                     Spacer(modifier = Modifier.height(3.dp))
-                    VideoMetadataChips(video, settings, lastPositionMs, isGrid = true, isRecentlyPlayed = isRecentlyPlayed)
+                    VideoMetadataChips(video, settings, lastPositionMs, isGrid = true)
                 }
             }
         }

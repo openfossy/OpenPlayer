@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,6 +42,7 @@ import com.openfossy.openplayer.domain.model.Video
 import com.openfossy.openplayer.domain.model.VideoFolder
 import com.openfossy.openplayer.domain.model.ViewSettings
 import com.openfossy.openplayer.domain.model.WatchHistory
+import com.openfossy.openplayer.ui.common.shapes.FolderShape
 import com.openfossy.openplayer.ui.screen.videolist.components.common.VideoWatchState
 import com.openfossy.openplayer.ui.screen.videolist.components.common.getWatchState
 import com.openfossy.openplayer.ui.screens.videolist.components.selection.SelectionCheckmarkOverlay
@@ -59,25 +62,32 @@ fun FolderGridItem(
     val isHidden = folder.name.startsWith(".")
     val isDense = settings.gridColumns >= 3
     val newCount = remember(videos, historyMap, settings.newVideosDaysThreshold) {
-        videos.count { v ->
-            val lastPos = historyMap[v.uri]?.lastPositionMs ?: 0L
-            getWatchState(
-                lastPositionMs = lastPos,
-                duration = v.duration,
-                dateAdded = v.dateAdded,
-                daysThreshold = settings.newVideosDaysThreshold
-            ) is VideoWatchState.New
-        }
+        videos.count { v -> getWatchState(
+            historyMap[v.uri]?.lastPositionMs ?: 0L,
+            v.duration,
+            v.dateAdded,
+            settings.newVideosDaysThreshold
+        ) is VideoWatchState.New }
     }
  
+    val normalBg = MaterialTheme.colorScheme.surfaceContainerLow
     val bgColor by animateColorAsState(
-        targetValue  = when {
+        targetValue = when {
             isSelected -> MaterialTheme.colorScheme.primaryContainer
-            isRecentlyPlayed -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
-            else -> MaterialTheme.colorScheme.surface
+            isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.08f).compositeOver(normalBg)
+            else -> normalBg
         },
         animationSpec = tween(180),
         label = "folderGridBg"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            isSelected -> MaterialTheme.colorScheme.primary
+            isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
+            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        },
+        animationSpec = tween(180),
+        label = "folderGridBorder"
     )
  
     // 1-column: wide landscape card
@@ -91,7 +101,7 @@ fun FolderGridItem(
             shape     = RoundedCornerShape(18.dp),
             colors    = CardDefaults.cardColors(containerColor = bgColor),
             elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 1.dp),
-            border    = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+            border    = BorderStroke(if (isSelected) 1.5.dp else 1.dp, borderColor)
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 Row(
@@ -105,8 +115,7 @@ fun FolderGridItem(
                             videos = videos,
                             isSelected = false,
                             settings = settings,
-                            modifier = Modifier.fillMaxSize(),
-                            isRecentlyPlayed = isRecentlyPlayed
+                            modifier = Modifier.fillMaxSize()
                         )
                         NewCountBadge(newCount)
                     }
@@ -115,7 +124,7 @@ fun FolderGridItem(
                         Text(
                             text       = folder.name,
                             style      = MaterialTheme.typography.titleSmall,
-                            fontWeight = if (isRecentlyPlayed) FontWeight.Bold else FontWeight.SemiBold,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines   = 2,
                             overflow   = TextOverflow.Ellipsis,
                             color      = when {
@@ -126,7 +135,7 @@ fun FolderGridItem(
                             }
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        FolderMetadataChips(videos, settings, isGrid = false, isRecentlyPlayed = isRecentlyPlayed)
+                        FolderMetadataChips(videos, settings, isGrid = false)
                     }
                 }
                 SelectionCheckmarkOverlay(visible = isSelected)
@@ -146,7 +155,7 @@ fun FolderGridItem(
             shape     = RoundedCornerShape(14.dp),
             colors    = CardDefaults.cardColors(containerColor = bgColor),
             elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 1.dp),
-            border    = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+            border    = BorderStroke(if (isSelected) 1.5.dp else 1.dp, borderColor)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -160,8 +169,7 @@ fun FolderGridItem(
                         settings = settings,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .fillMaxSize(),
-                        isRecentlyPlayed = isRecentlyPlayed
+                            .fillMaxSize()
                     )
                     NewCountBadge(newCount)
                     }
@@ -173,7 +181,7 @@ fun FolderGridItem(
                         Text(
                             text       = folder.name,
                             style      = MaterialTheme.typography.bodySmall,
-                            fontWeight = if (isRecentlyPlayed) FontWeight.Bold else FontWeight.SemiBold,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines   = 1,
                             overflow   = TextOverflow.Ellipsis,
                             color      = when {
@@ -184,7 +192,7 @@ fun FolderGridItem(
                             }
                         )
                         Spacer(modifier = Modifier.height(3.dp))
-                        FolderMetadataChips(videos, settings, isGrid = true, isRecentlyPlayed = isRecentlyPlayed)
+                        FolderMetadataChips(videos, settings, isGrid = true)
                     }
                 }
                 SelectionCheckmarkOverlay(visible = isSelected)
@@ -198,20 +206,19 @@ fun FolderGridItem(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(FolderShape())
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        shape     = RoundedCornerShape(10.dp),
-        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 1.dp),
-        border    = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+        shape     = FolderShape(),
+        colors    = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border    = null
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             FolderMediaPreview(
                 videos = videos,
                 isSelected = false,
                 settings = settings,
-                modifier = Modifier.fillMaxSize(),
-                isRecentlyPlayed = isRecentlyPlayed
+                modifier = Modifier.fillMaxSize()
             )
             NewCountBadge(newCount)
  
@@ -219,6 +226,7 @@ fun FolderGridItem(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .clip(FolderShape())
                     .background(
                         Brush.verticalGradient(
                             0.40f to Color.Transparent,
@@ -227,18 +235,22 @@ fun FolderGridItem(
                     )
             )
  
-            // Selected or Recently Played tint
+            // Selected or Recently played highlight conforming to FolderShape
             if (isSelected) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .clip(FolderShape())
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.30f))
+                        .border(1.5.dp, MaterialTheme.colorScheme.primary, FolderShape())
                 )
             } else if (isRecentlyPlayed) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                        .clip(FolderShape())
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.75f), FolderShape())
                 )
             }
  
@@ -251,15 +263,20 @@ fun FolderGridItem(
             ) {
                 Text(
                     text       = folder.name,
-                    color      = if (isRecentlyPlayed) MaterialTheme.colorScheme.primaryContainer else if (isHidden) Color.White.copy(alpha = 0.5f) else Color.White,
+                    color      = when {
+                        isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
+                        isRecentlyPlayed -> MaterialTheme.colorScheme.primaryContainer
+                        isHidden -> Color.White.copy(alpha = 0.5f)
+                        else -> Color.White
+                    },
                     style      = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (isRecentlyPlayed) FontWeight.Bold else FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines   = 1,
                     overflow   = TextOverflow.Ellipsis
                 )
                 Text(
                     text  = stringResource(R.string.folder_videos_count, videos.size),
-                    color = if (isRecentlyPlayed) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.75f),
+                    color = Color.White.copy(alpha = 0.75f),
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 9.5.sp
                 )

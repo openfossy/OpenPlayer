@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -47,15 +48,25 @@ fun VideoListItem(
 ) {
     val haptic = LocalHapticFeedback.current
  
-    // Smooth background colour transition on select or recently played highlight
+    // Smooth background colour transition on select and recent play highlight
+    val normalBg = MaterialTheme.colorScheme.surfaceContainerLow
     val bgColor by animateColorAsState(
-        targetValue  = when {
+        targetValue = when {
             isSelected -> MaterialTheme.colorScheme.primaryContainer
-            isRecentlyPlayed -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
-            else -> MaterialTheme.colorScheme.surfaceContainerLow
+            isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.08f).compositeOver(normalBg)
+            else -> normalBg
         },
         animationSpec = tween(180),
         label = "listItemBg"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            isSelected -> MaterialTheme.colorScheme.primary
+            isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
+            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        },
+        animationSpec = tween(180),
+        label = "listItemBorder"
     )
  
     Card(
@@ -76,7 +87,10 @@ fun VideoListItem(
             defaultElevation  = if (isSelected) 0.dp else 0.5.dp,
             pressedElevation  = 0.dp
         ),
-        border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+        border = BorderStroke(
+            width = if (isSelected) 1.5.dp else 1.dp,
+            color = borderColor
+        )
     ) {
         Row(
             modifier = Modifier
@@ -86,12 +100,7 @@ fun VideoListItem(
         ) {
             //  Thumbnail 
             val watchState = remember(lastPositionMs, video.duration, video.dateAdded, settings.newVideosDaysThreshold) {
-                getWatchState(
-                    lastPositionMs = lastPositionMs,
-                    duration = video.duration,
-                    dateAdded = video.dateAdded,
-                    daysThreshold = settings.newVideosDaysThreshold
-                )
+                getWatchState(lastPositionMs, video.duration, video.dateAdded, settings.newVideosDaysThreshold)
             }
             Card(
                 modifier = Modifier
@@ -101,11 +110,10 @@ fun VideoListItem(
                     .then(if (watchState is VideoWatchState.Completed) Modifier.alpha(0.6f) else Modifier),
                 shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = when {
-                        isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                        watchState is VideoWatchState.InProgress -> MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-                        else -> Color.Transparent
-                    }
+                    containerColor = if (watchState is VideoWatchState.InProgress)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                    else
+                        Color.Transparent
                 ),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
@@ -136,7 +144,7 @@ fun VideoListItem(
                     }
                 }
 
-                // Watch state badge (top-left): NEW / Unwatched / Running / Ended
+                // Watch state badge (top-left): NEW / Running / Ended
                 if (!isSelected) {
                     WatchStateBadge(watchState, isLarge = false)
                 }
@@ -165,7 +173,7 @@ fun VideoListItem(
                 Text(
                     text = displayTitle,
                     style     = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isRecentlyPlayed) FontWeight.Bold else FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines  = 2,
                     overflow  = TextOverflow.Ellipsis,
                     color     = when {
@@ -182,11 +190,10 @@ fun VideoListItem(
                         text = video.path,
                         style = MaterialTheme.typography.bodySmall,
                         fontSize = 11.sp,
-                        color = when {
-                            isSelected -> MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            isRecentlyPlayed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
-                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                        },
+                        color = if (isSelected)
+                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        else
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -194,7 +201,7 @@ fun VideoListItem(
  
                 Spacer(modifier = Modifier.height(5.dp))
  
-                VideoMetadataChips(video, settings, lastPositionMs, isRecentlyPlayed = isRecentlyPlayed)
+                VideoMetadataChips(video, settings, lastPositionMs)
             }
 
             // Info icon – only shown when caller provides onInfoClick
