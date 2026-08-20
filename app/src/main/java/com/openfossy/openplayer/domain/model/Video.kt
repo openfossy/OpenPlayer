@@ -11,7 +11,7 @@ enum class ViewMode {
 }
 
 enum class SortField {
-    TITLE, DATE, PLAYED_TIME, STATUS, LENGTH, SIZE, RESOLUTION, PATH, FRAME_RATE, TYPE
+    TITLE, DATE, PLAYED_TIME, LENGTH, SIZE
 }
 
 enum class SortDirection {
@@ -50,16 +50,11 @@ data class Video(
 
 fun List<Video>.applySort(field: SortField, direction: SortDirection): List<Video> {
     val sorted = when (field) {
-        SortField.TITLE -> sortedBy { it.title.lowercase() }
+        SortField.TITLE -> sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
         SortField.DATE -> sortedBy { it.dateAdded }
-        SortField.PLAYED_TIME -> sortedBy { it.playedTime ?: 0L }
-        SortField.STATUS -> sortedBy { it.playedTime ?: 0L }
+        SortField.PLAYED_TIME -> sortedBy { it.lastPlayedAt ?: it.playedTime ?: 0L }
         SortField.LENGTH -> sortedBy { it.duration }
         SortField.SIZE -> sortedBy { it.size }
-        SortField.RESOLUTION -> sortedBy { it.resolution ?: "" }
-        SortField.PATH -> sortedBy { it.path.lowercase() }
-        SortField.FRAME_RATE -> sortedBy { it.frameRate ?: 0f }
-        SortField.TYPE -> sortedBy { it.title.substringAfterLast(".", "").lowercase() }
     }
     return if (direction == SortDirection.DESCENDING) sorted.reversed() else sorted
 }

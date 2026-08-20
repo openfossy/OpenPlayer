@@ -713,7 +713,8 @@ fun VideoListScreen(
                                 val videos = explorerItems.filterIsInstance<ExplorerItem.VideoItem>().map { it.video }
                                 
                                 val folderVideosMap = folders.associateWith { folder ->
-                                    allVideosForSize.filter { it.path.startsWith(folder.id) }
+                                    val prefix = if (folder.id.endsWith("/")) folder.id else "${folder.id}/"
+                                    allVideosForSize.filter { it.path == folder.id || it.path.startsWith(prefix) }
                                 }
                                 
                                 val sortedFolders = folders.applyFolderSort(folderVideosMap, viewSettings.sortField, viewSettings.sortDirection)

@@ -183,7 +183,7 @@ fun RotarySortWheel(
     onSortFieldSelected: (SortField) -> Unit,
     onSortOrderToggled: (SortDirection) -> Unit
 ) {
-    val items = SortField.values()
+    val items = SortField.entries.toTypedArray()
     val itemCount = items.size
     val initialSelectedIndex = items.indexOf(currentSortField).takeIf { it >= 0 } ?: 0
     val anglePerItem = 360f / itemCount
@@ -193,8 +193,7 @@ fun RotarySortWheel(
     val coroutineScope = rememberCoroutineScope()
 
     val wheelDiameterDp = 300.dp
-    // Slightly wider radius to accommodate 10 items without overlapping
-    val radiusDp = 110.dp
+    val radiusDp = 100.dp
     val density = LocalDensity.current
     val radiusPx = with(density) { radiusDp.toPx() }
 
@@ -347,7 +346,7 @@ fun RotarySortWheel(
                     else
                         MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    fontSize = 11.sp, // Adjusted slightly to fit 10 items comfortably
+                    fontSize = 12.sp,
                     letterSpacing = 0.3.sp
                 )
             }
@@ -450,12 +449,7 @@ fun getSortDirectionLabels(field: SortField): Pair<String, String> {
         SortField.TITLE -> "A to z" to "Z to a"
         SortField.DATE -> "Oldest" to "Newest"
         SortField.PLAYED_TIME -> "Oldest" to "Newest"
-        SortField.STATUS -> "Asc" to "Desc"
         SortField.LENGTH -> "Shortest" to "Longest"
         SortField.SIZE -> "Smallest" to "Largest"
-        SortField.RESOLUTION -> "Lowest" to "Highest"
-        SortField.PATH -> "Asc" to "Desc"
-        SortField.FRAME_RATE -> "Lowest" to "Highest"
-        SortField.TYPE -> "Asc" to "Desc"
     }
 }

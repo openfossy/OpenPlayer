@@ -60,7 +60,8 @@ fun ExplorerListContent(
 
     val folderVideosMap = remember(folders, allVideosForSize) {
         folders.associateWith { folder ->
-            allVideosForSize.filter { it.path.startsWith(folder.id) }
+            val prefix = if (folder.id.endsWith("/")) folder.id else "${folder.id}/"
+            allVideosForSize.filter { it.path == folder.id || it.path.startsWith(prefix) }
         }
     }
 

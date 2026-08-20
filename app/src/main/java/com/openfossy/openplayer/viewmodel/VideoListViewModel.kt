@@ -94,19 +94,21 @@ class VideoListViewModel(
     }
 
     /**
-     * Master-filtered flat list: applies storage path filter, then folder filter mode (whitelist/blacklist).
+     * Master-filtered flat list: applies storage path filter, then folder filter mode (whitelist/blacklist),
+     * and attaches playback history info.
      * All subsequent derived flows consume this instead of _rawVideosFlat directly.
      */
     private val _activeVideosFlat: StateFlow<List<Video>> =
         combine(
             _rawVideosFlat,
             _selectedStorage,
-            playbackSettingsRepo.playbackSettingsFlow
-        ) { raw, storage, settings ->
+            playbackSettingsRepo.playbackSettingsFlow,
+            _historyMap
+        ) { raw, storage, settings, histMap ->
             val storageFiltered = if (storage == null) raw
             else raw.filter { it.path.startsWith(storage.rootPath) }
 
-            when (settings.folderFilterMode) {
+            val filtered = when (settings.folderFilterMode) {
                 FolderFilterMode.WHITELIST -> {
                     val whitelist = settings.whitelistedFolders
                     if (whitelist.isEmpty()) emptyList()
@@ -123,20 +125,34 @@ class VideoListViewModel(
                 }
                 FolderFilterMode.NONE -> storageFiltered
             }
+
+            filtered.map { video ->
+                val hist = histMap[video.uri]
+                if (hist != null) {
+                    video.copy(
+                        playedTime = hist.lastPositionMs,
+                        lastPlayedAt = hist.lastPlayedAt
+                    )
+                } else {
+                    video
+                }
+            }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
-     * Master-filtered folder map: storage+folder-mode filtered, then hidden-path and search filtered.
+     * Master-filtered folder map: storage+folder-mode filtered, hidden-path and search filtered,
+     * with playback history attached.
      */
     val videosByFolder: StateFlow<Map<VideoFolder, List<Video>>> =
         combine(
             _rawVideosByFolder,
             _selectedStorage,
             _searchQuery,
-            playbackSettingsRepo.playbackSettingsFlow
-        ) { raw, storage, query, settings ->
+            playbackSettingsRepo.playbackSettingsFlow,
+            _historyMap
+        ) { raw, storage, query, settings, histMap ->
             raw.mapValues { (_, videos) ->
-                videos.filter { video ->
+                videos.mapNotNull { video ->
                     val matchesStorage = storage == null || video.path.startsWith(storage.rootPath)
                     val matchesPath = !video.path.contains("/.")
                     val matchesSearch = query.isBlank() || video.title.contains(query, ignoreCase = true)
@@ -150,7 +166,17 @@ class VideoListViewModel(
                         }
                         FolderFilterMode.NONE -> true
                     }
-                    matchesStorage && matchesPath && matchesSearch && matchesFilter
+                    if (matchesStorage && matchesPath && matchesSearch && matchesFilter) {
+                        val hist = histMap[video.uri]
+                        if (hist != null) {
+                            video.copy(
+                                playedTime = hist.lastPositionMs,
+                                lastPlayedAt = hist.lastPlayedAt
+                            )
+                        } else {
+                            video
+                        }
+                    } else null
                 }
             }.filterValues { it.isNotEmpty() }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
@@ -401,7 +427,20 @@ class VideoListViewModel(
 
     fun getSearchResults(query: String): List<Video> {
         if (query.isBlank()) return emptyList()
-        return _rawVideosFlat.value.filter { it.title.contains(query, ignoreCase = true) }
+        val histMap = _historyMap.value
+        return _rawVideosFlat.value
+            .filter { it.title.contains(query, ignoreCase = true) }
+            .map { video ->
+                val hist = histMap[video.uri]
+                if (hist != null) {
+                    video.copy(
+                        playedTime = hist.lastPositionMs,
+                        lastPlayedAt = hist.lastPlayedAt
+                    )
+                } else {
+                    video
+                }
+            }
     }
 
     // Explorer Path Navigation

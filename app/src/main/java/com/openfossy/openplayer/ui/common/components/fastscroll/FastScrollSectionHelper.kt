@@ -24,8 +24,6 @@ object FastScrollSectionHelper {
                 val firstChar = video.title.trim().firstOrNull()?.uppercaseChar()
                 if (firstChar != null && firstChar.isLetter()) {
                     firstChar.toString()
-                } else if (firstChar != null && firstChar.isDigit()) {
-                    "#"
                 } else {
                     "#"
                 }
@@ -33,15 +31,10 @@ object FastScrollSectionHelper {
             SortField.DATE -> {
                 formatTimestamp(video.dateAdded)
             }
-            SortField.PLAYED_TIME, SortField.STATUS -> {
-                val played = video.playedTime ?: 0L
-                if (played > 0L) {
-                    if (video.duration > 0L) {
-                        val percent = (played * 100 / video.duration).coerceIn(0, 100)
-                        "$percent%"
-                    } else {
-                        "Played"
-                    }
+            SortField.PLAYED_TIME -> {
+                val playedAt = video.lastPlayedAt ?: video.playedTime ?: 0L
+                if (playedAt > 0L) {
+                    formatTimestamp(playedAt)
                 } else {
                     "Unplayed"
                 }
@@ -51,19 +44,6 @@ object FastScrollSectionHelper {
             }
             SortField.SIZE -> {
                 formatSize(video.size)
-            }
-            SortField.RESOLUTION -> {
-                formatResolutionCompact(video.resolution) ?: "SD"
-            }
-            SortField.PATH -> {
-                video.folderName.take(12).ifBlank { "/" }
-            }
-            SortField.FRAME_RATE -> {
-                val fps = video.frameRate?.toInt() ?: 0
-                if (fps > 0) "${fps}fps" else "30fps"
-            }
-            SortField.TYPE -> {
-                video.title.substringAfterLast(".", "").uppercase().takeIf { it.isNotBlank() } ?: "OTHER"
             }
         }
     }
@@ -75,12 +55,10 @@ object FastScrollSectionHelper {
     ): String {
         if (folder == null) return ""
         return when (sortField) {
-            SortField.TITLE, SortField.PATH, SortField.RESOLUTION, SortField.FRAME_RATE, SortField.TYPE -> {
+            SortField.TITLE -> {
                 val firstChar = folder.name.trim().firstOrNull()?.uppercaseChar()
                 if (firstChar != null && firstChar.isLetter()) {
                     firstChar.toString()
-                } else if (firstChar != null && firstChar.isDigit()) {
-                    "#"
                 } else {
                     "#"
                 }
@@ -89,9 +67,9 @@ object FastScrollSectionHelper {
                 val maxDate = videos?.maxOfOrNull { it.dateAdded } ?: 0L
                 formatTimestamp(maxDate)
             }
-            SortField.PLAYED_TIME, SortField.STATUS -> {
-                val maxPlayed = videos?.maxOfOrNull { it.playedTime ?: 0L } ?: 0L
-                if (maxPlayed > 0L) "Played" else "Unplayed"
+            SortField.PLAYED_TIME -> {
+                val maxPlayed = videos?.maxOfOrNull { it.lastPlayedAt ?: it.playedTime ?: 0L } ?: 0L
+                if (maxPlayed > 0L) formatTimestamp(maxPlayed) else "Unplayed"
             }
             SortField.LENGTH -> {
                 val totalDuration = videos?.sumOf { it.duration } ?: 0L
