@@ -1,23 +1,15 @@
 package com.openfossy.openplayer.ui.screen.settings
 
+import android.app.ActivityManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -33,34 +25,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
-import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.sp
 import com.openfossy.openplayer.BuildConfig
 import com.openfossy.openplayer.R
 import com.openfossy.openplayer.player.engine.MPVPlayerEngine
 import com.openfossy.openplayer.ui.common.components.AnimatedNosvedLogo
 import `is`.xyz.mpv.MPVLib
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,7 +95,7 @@ fun AboutScreen(
                 title = {
                     Text(
                         text = "About",
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
@@ -145,27 +125,34 @@ fun AboutScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
 
-            // 1. Brand / Identity Card
+            // 1. Check for Updates Quick Button (at top as shown in screenshot)
+            CheckForUpdatesButton(context = context)
+
+            // 2. Brand Hero Identity Card
             AboutBrandCard(versionName = versionName, buildType = buildType)
 
-            // 2. Donate Section
-            AboutDonateCard(context = context)
+            // 3. System & Device Info Section
+            SectionHeader(title = "System")
+            AboutSystemInfoCard(context = context)
 
-            // 3. Device & Hardware details
-            AboutSectionLabel(label = "Device Info")
-            AboutDeviceInfoCard()
-
-            // 4. Media Engine details
-            AboutSectionLabel(label = "Engine Versions")
+            // 4. Engine Versions Section
+            SectionHeader(title = "Engine Versions")
             AboutEngineCard(mpvVersion = mpvVersion, ffmpegVersion = ffmpegVersion)
 
-            // 5. Links & Action Cards
-            AboutSectionLabel(label = "Community & Support")
-            AboutLinksCard(context = context)
+            // 5. Community (openfossy) Section
+            SectionHeader(title = "Community")
+            AboutCommunityCard(context = context)
 
-            // 6. Credits
+            // 6. Developer & Sponsor (devson) Section
+            SectionHeader(title = "Developer")
+            AboutDeveloperCard(context = context)
+
+            // 7. Direct UPI Donation Card
+            AboutDonateCard(context = context)
+
+            // 8. Open Source Credits & Third-party Libraries
             AboutCreditsCard(onClick = onNavigateToCredits)
 
             Spacer(Modifier.height(24.dp))
@@ -174,13 +161,53 @@ fun AboutScreen(
 }
 
 @Composable
-private fun AboutSectionLabel(label: String) {
+private fun CheckForUpdatesButton(context: Context) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable {
+                openUrl(context, "https://github.com/openfossy/OpenPlayer/releases/latest")
+            },
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp, horizontal = 20.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "Check for Updates",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "Check for Updates Now",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
     Text(
-        text = label,
-        style = MaterialTheme.typography.labelLarge,
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
     )
 }
 
@@ -194,7 +221,7 @@ private fun AboutCard(content: @Composable ColumnScope.() -> Unit) {
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             content = content
         )
     }
@@ -209,7 +236,7 @@ private fun AboutBrandCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 4.dp
+        tonalElevation = 3.dp
     ) {
         Column(
             modifier = Modifier
@@ -218,11 +245,10 @@ private fun AboutBrandCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Dynamic Linear Animated Nosved Logo
             AnimatedNosvedLogo(
                 modifier = Modifier
-                    .padding(vertical = 12.dp)
-                    .size(96.dp),
+                    .padding(vertical = 8.dp)
+                    .size(92.dp),
                 color = MaterialTheme.colorScheme.primary,
                 animateOnEntry = true
             )
@@ -271,19 +297,125 @@ private fun AboutBrandCard(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = "GPL v3",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun AboutDeviceInfoCard() {
-    AboutCard {
-        InfoRow(label = "Device Model", value = Build.MODEL)
-        InfoRow(label = "Brand", value = Build.BRAND)
-        InfoRow(label = "Android Version", value = "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-        InfoRow(label = "CPU Architecture", value = Build.SUPPORTED_ABIS.joinToString(", "))
+private fun AboutSystemInfoCard(context: Context) {
+    val manufacturer = remember {
+        Build.MANUFACTURER.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
     }
+    val device = remember {
+        val model = Build.MODEL
+        val deviceCode = Build.DEVICE
+        if (model.contains(deviceCode, ignoreCase = true)) model else "$model ($deviceCode)"
+    }
+    val androidVer = remember {
+        "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
+    }
+    val cpuAbi = remember {
+        Build.SUPPORTED_ABIS.joinToString(", ")
+    }
+    val cpuCores = remember {
+        "${Runtime.getRuntime().availableProcessors()} cores"
+    }
+    val ram = remember(context) {
+        getTotalRam(context)
+    }
+    val openGlEs = remember(context) {
+        getGlEsVersion(context)
+    }
+    val vulkan = remember(context) {
+        getVulkanVersion(context)
+    }
+    val gpuRenderer = remember {
+        getGpuRenderer()
+    }
+    val board = remember {
+        Build.BOARD
+    }
+    val kernel = remember {
+        getKernelVersion()
+    }
+    val displayInfo = remember(context) {
+        getDisplayInfo(context)
+    }
+
+    AboutCard {
+        SystemInfoRow(label = "Manufacturer", value = manufacturer)
+        SystemDivider()
+        SystemInfoRow(label = "Device", value = device)
+        SystemDivider()
+        SystemInfoRow(label = "Android", value = androidVer)
+        SystemDivider()
+        SystemInfoRow(label = "CPU ABI", value = cpuAbi)
+        SystemDivider()
+        SystemInfoRow(label = "CPU Cores", value = cpuCores)
+        SystemDivider()
+        SystemInfoRow(label = "RAM", value = ram)
+        SystemDivider()
+        SystemInfoRow(label = "OpenGL ES", value = openGlEs)
+        SystemDivider()
+        SystemInfoRow(label = "Vulkan", value = vulkan)
+        SystemDivider()
+        SystemInfoRow(label = "GPU Renderer", value = gpuRenderer)
+        SystemDivider()
+        SystemInfoRow(label = "Board", value = board)
+        SystemDivider()
+        SystemInfoRow(label = "Kernel", value = kernel)
+        SystemDivider()
+        SystemInfoRow(label = "Display", value = displayInfo)
+    }
+}
+
+@Composable
+private fun SystemInfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp, horizontal = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1.35f)
+        )
+    }
+}
+
+@Composable
+private fun SystemDivider() {
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+        modifier = Modifier.padding(vertical = 2.dp)
+    )
 }
 
 @Composable
@@ -292,8 +424,206 @@ private fun AboutEngineCard(
     ffmpegVersion: String
 ) {
     AboutCard {
-        InfoRow(label = "MPV Version", value = mpvVersion)
-        InfoRow(label = "FFmpeg Version", value = ffmpegVersion)
+        SystemInfoRow(label = "MPV Engine", value = mpvVersion)
+        SystemDivider()
+        SystemInfoRow(label = "FFmpeg Version", value = ffmpegVersion)
+    }
+}
+
+@Composable
+private fun AboutCommunityCard(context: Context) {
+    AboutCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Groups,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "openfossy",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Open-source community for native Android media apps.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        SystemDivider()
+
+        LinkRow(
+            icon = Icons.Default.Code,
+            title = "GitHub Repository",
+            subtitle = "github.com/openfossy/OpenPlayer",
+            onClick = {
+                openUrl(context, "https://github.com/openfossy/OpenPlayer")
+            }
+        )
+        SystemDivider()
+        LinkRow(
+            icon = Icons.Default.Public,
+            title = "Organization Profile",
+            subtitle = "Explore more projects on openfossy",
+            onClick = {
+                openUrl(context, "https://github.com/openfossy")
+            }
+        )
+        SystemDivider()
+        LinkRow(
+            icon = Icons.Default.Update,
+            title = "Releases & Changelog",
+            subtitle = "Download APKs and read version release notes",
+            onClick = {
+                openUrl(context, "https://github.com/openfossy/OpenPlayer/releases")
+            }
+        )
+        SystemDivider()
+        LinkRow(
+            icon = Icons.Default.BugReport,
+            title = "Report an Issue",
+            subtitle = "Submit bugs, crashes, or feature requests",
+            onClick = {
+                openUrl(context, "https://github.com/openfossy/OpenPlayer/issues/new")
+            }
+        )
+        SystemDivider()
+        LinkRow(
+            icon = Icons.AutoMirrored.Filled.Send,
+            title = "Telegram Channel",
+            subtitle = "Join our community updates channel",
+            onClick = {
+                openUrl(context, "https://t.me/Nosved_Player")
+            }
+        )
+    }
+}
+
+@Composable
+private fun AboutDeveloperCard(context: Context) {
+    AboutCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "devson (@devson1024)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Lead Developer & Project Creator",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Dedicated GitHub Sponsor Button
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .clickable {
+                    openUrl(context, "https://github.com/sponsors/devson1024")
+                },
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Sponsor",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Sponsor @devson1024",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "Support via GitHub Sponsors",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        SystemDivider()
+
+        LinkRow(
+            icon = Icons.Default.Code,
+            title = "Developer GitHub Profile",
+            subtitle = "github.com/devson1024",
+            onClick = {
+                openUrl(context, "https://github.com/devson1024")
+            }
+        )
     }
 }
 
@@ -303,11 +633,8 @@ private fun AboutDonateCard(context: Context) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-        )
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 2.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -321,37 +648,35 @@ private fun AboutDonateCard(context: Context) {
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Favorite,
+                        imageVector = Icons.Default.VolunteerActivism,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
                 Column {
                     Text(
-                        text = "Support Development",
+                        text = "Direct Support (UPI)",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Help us keep the player free and open-source.",
+                        text = "For Indian supporters via UPI payment",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
-
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.surfaceContainerLow
             ) {
                 Row(
                     modifier = Modifier
@@ -403,47 +728,6 @@ private fun AboutDonateCard(context: Context) {
 }
 
 @Composable
-private fun AboutLinksCard(context: Context) {
-    AboutCard {
-        LinkRow(
-            icon = Icons.Default.Code,
-            title = "GitHub Repository",
-            subtitle = "Browse source code and contribute",
-            onClick = {
-                openUrl(context, "https://github.com/devson1024/Nosved-Player")
-            }
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 44.dp))
-        LinkRow(
-            icon = Icons.Default.Update,
-            title = "Latest Release",
-            subtitle = "Check out the latest release notes and updates",
-            onClick = {
-                openUrl(context, "https://github.com/devson1024/Nosved-Player/releases")
-            }
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 44.dp))
-        LinkRow(
-            icon = Icons.Default.BugReport,
-            title = "Report an Issue",
-            subtitle = "Found a bug? Help us improve by listing it",
-            onClick = {
-                openUrl(context, "https://github.com/devson1024/Nosved-Player/issues/new")
-            }
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 44.dp))
-        LinkRow(
-            icon = Icons.AutoMirrored.Filled.Send,
-            title = "Telegram Channel",
-            subtitle = "Join our Telegram community channel",
-            onClick = {
-                openUrl(context, "https://t.me/Nosved_Player")
-            }
-        )
-    }
-}
-
-@Composable
 private fun AboutCreditsCard(onClick: () -> Unit) {
     AboutCard {
         Row(
@@ -456,7 +740,7 @@ private fun AboutCreditsCard(onClick: () -> Unit) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.secondaryContainer),
                 contentAlignment = Alignment.Center
@@ -464,7 +748,7 @@ private fun AboutCreditsCard(onClick: () -> Unit) {
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
@@ -476,7 +760,7 @@ private fun AboutCreditsCard(onClick: () -> Unit) {
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Open source libraries, versions, and licenses",
+                    text = "Open source libraries, licenses, and components",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -493,30 +777,6 @@ private fun AboutCreditsCard(onClick: () -> Unit) {
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1.5f),
-            textAlign = TextAlign.End
-        )
-    }
-}
-
-@Composable
 private fun LinkRow(
     icon: ImageVector,
     title: String,
@@ -527,7 +787,7 @@ private fun LinkRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp, horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -561,6 +821,88 @@ private fun LinkRow(
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+private fun getTotalRam(context: Context): String {
+    return try {
+        val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val memInfo = ActivityManager.MemoryInfo()
+        actManager?.getMemoryInfo(memInfo)
+        val totalGb = memInfo.totalMem.toDouble() / (1024.0 * 1024.0 * 1024.0)
+        String.format(Locale.US, "%.1f GB", totalGb)
+    } catch (e: Throwable) {
+        "Unknown"
+    }
+}
+
+private fun getGlEsVersion(context: Context): String {
+    return try {
+        val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val version = actManager?.deviceConfigurationInfo?.glEsVersion
+        if (!version.isNullOrBlank()) version else "3.2"
+    } catch (e: Throwable) {
+        "3.2"
+    }
+}
+
+private fun getVulkanVersion(context: Context): String {
+    return try {
+        val pm = context.packageManager
+        val features = pm.systemAvailableFeatures
+        val vulkanFeature = features.firstOrNull { it.name == PackageManager.FEATURE_VULKAN_HARDWARE_VERSION }
+        val vulkanLevelFeature = features.firstOrNull { it.name == PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL }
+
+        if (vulkanFeature != null && vulkanFeature.version > 0) {
+            val major = (vulkanFeature.version shr 22) and 0x3FF
+            val minor = (vulkanFeature.version shr 12) and 0x3FF
+            val level = vulkanLevelFeature?.version ?: 1
+            "Vulkan $major.$minor (Level $level)"
+        } else if (pm.hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL)) {
+            "Vulkan Supported"
+        } else {
+            "Not Supported"
+        }
+    } catch (e: Throwable) {
+        "Vulkan 1.1"
+    }
+}
+
+private fun getGpuRenderer(): String {
+    return try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && Build.SOC_MODEL.isNotBlank() && Build.SOC_MODEL != "unknown") {
+            Build.SOC_MODEL
+        } else if (Build.HARDWARE.isNotBlank() && Build.HARDWARE != "unknown") {
+            Build.HARDWARE
+        } else {
+            Build.BOARD
+        }
+    } catch (e: Throwable) {
+        Build.HARDWARE
+    }
+}
+
+private fun getKernelVersion(): String {
+    return try {
+        System.getProperty("os.version") ?: "Linux"
+    } catch (e: Throwable) {
+        "Linux"
+    }
+}
+
+private fun getDisplayInfo(context: Context): String {
+    return try {
+        val metrics = context.resources.displayMetrics
+        val width = metrics.widthPixels
+        val height = metrics.heightPixels
+        val refreshRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            context.display?.refreshRate?.toInt() ?: 60
+        } else {
+            60
+        }
+        "${width}x${height} @ ${refreshRate}Hz"
+    } catch (e: Throwable) {
+        "Unknown"
     }
 }
 
