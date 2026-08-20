@@ -27,6 +27,7 @@ import com.openfossy.openplayer.ui.screen.settings.PlayerInterfaceSettingsScreen
 import com.openfossy.openplayer.ui.screen.settings.AboutScreen
 import com.openfossy.openplayer.ui.screen.settings.CreditsScreen
 import com.openfossy.openplayer.ui.screen.settings.FolderScreen
+import com.openfossy.openplayer.ui.screen.settings.StorageAnalyzeScreen
 import com.openfossy.openplayer.ui.screen.videolist.VideoListScreen
 import com.openfossy.openplayer.ui.screen.FeedScreen
 import com.openfossy.openplayer.ui.screen.settings.MpvConfigSettingsScreen
@@ -227,6 +228,11 @@ fun AppNavigation(
                     navController.navigate("history") {
                         launchSingleTop = true
                     }
+                },
+                onStorageAnalyzerClick = {
+                    navController.navigate("storage_analyzer") {
+                        launchSingleTop = true
+                    }
                 }
             )
         }
@@ -304,6 +310,37 @@ fun AppNavigation(
             RecycleBinScreen(
                 onBack = safePopBackStack,
                 fileOpsViewModel = fileOpsViewModel
+            )
+        }
+
+        composable("storage_analyzer") {
+            StorageAnalyzeScreen(
+                onBack = safePopBackStack,
+                videoListViewModel = videoListViewModel,
+                onNavigateToRecycleBin = {
+                    navController.navigate("recycle_bin") {
+                        launchSingleTop = true
+                    }
+                },
+                onVideoClick = { uri, playlist ->
+                    val playerVm = playerViewModel()
+                    val flatVideos = videoListViewModel.videosFlat.value
+                    val currentVideo = flatVideos.find { it.uri == uri.toString() } ?: Video(
+                        uri = uri.toString(),
+                        title = uri.lastPathSegment?.substringBeforeLast('.') ?: "Video",
+                        duration = 0L,
+                        folderName = "",
+                        path = uri.path ?: "",
+                        size = 0L,
+                        width = 0,
+                        height = 0
+                    )
+                    playerVm.setQueue(listOf(currentVideo))
+                    playerVm.prepareVideo(uri, playlist)
+                    navController.navigate("player") {
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 

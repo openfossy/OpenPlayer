@@ -71,7 +71,8 @@ fun ProfileScreen(
     onSearch: (String) -> Unit,
     onBrowseClick: () -> Unit,
     onFeedClick: () -> Unit,
-    onSeeMoreHistoryClick: () -> Unit
+    onSeeMoreHistoryClick: () -> Unit,
+    onStorageAnalyzerClick: () -> Unit = {}
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val context = LocalContext.current
@@ -546,7 +547,9 @@ fun ProfileScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 20.dp),
+                                        .padding(horizontal = 20.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .clickable(onClick = onStorageAnalyzerClick),
                                     shape = RoundedCornerShape(20.dp),
                                     colors = CardDefaults.cardColors(
                                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
@@ -577,12 +580,23 @@ fun ProfileScreen(
                                                         color = MaterialTheme.colorScheme.onSurface
                                                     )
                                                 }
-                                                Text(
-                                                    text = "${storageInfo.third}%",
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "${storageInfo.third}%",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                    Icon(
+                                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
                                             }
 
                                             LinearProgressIndicator(
